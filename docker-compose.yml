@@ -1,0 +1,48 @@
+
+networks:
+  trafico-network:
+    driver: bridge
+
+volumes:
+  db-data:
+
+services:
+  # Servicio de scraping de Waze
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: waze-scraper
+    environment:
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=waze_events
+      - MONGO_USER=waze_user
+      - MONGO_PASSWORD=securepassword
+      - TARGET_COUNT=10000
+      - CITY=santiago
+      - COUNTRY=chile
+    volumes:
+      - ./scraper/data:/data
+    networks:
+      - trafico-network
+    restart: unless-stopped
+    depends_on:
+      - mongo
+
+  # Servicio de base de datos MongoDB
+  mongo:
+    image: mongo:6.0
+    container_name: waze-db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=securepassword
+      - MONGO_INITDB_DATABASE=waze_events
+    ports:
+      - "27017:27017"
+    volumes:
+      - db-data:/data/db
+      - ./storage/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - trafico-network
+    restart: unless-stopped
