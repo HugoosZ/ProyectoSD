@@ -23,7 +23,7 @@ services:
       - CITY=santiago
       - COUNTRY=chile
     volumes:
-      - ./scraper/data:/data
+      - ./scraper/src:/app/src
     networks:
       - trafico-network
     restart: unless-stopped
