@@ -1,4 +1,3 @@
-version: "3.8"
 
 networks:
   trafico-network:
@@ -6,6 +5,8 @@ networks:
 
 volumes:
   db-data:
+  redis-data:
+
 
 services:
 
@@ -52,14 +53,16 @@ services:
 
   # Servicio de cache con Redis
   redis:
-    image: redis:7
+    image: redis:7-alpine
     container_name: waze-cache
+    
     ports:
-      - "6379:6379"
+      - "6379:6379"    # Puerto estándar (para tus servicios)
+    volumes:
+      - redis-data:/data
     networks:
       - trafico-network
     restart: unless-stopped
-
   # Servicio que administra el cache y políticas
 
   cache-service:
@@ -70,3 +73,16 @@ services:
     networks:
       - trafico-network
     restart: unless-stopped
+
+
+  traffic-generator:
+    build:
+      context: ./traffic-generator
+    container_name: waze-traffic-gen
+    networks:
+      - trafico-network
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+  
