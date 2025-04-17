@@ -1,25 +1,22 @@
 FROM python:3.9-slim
 
-# Instalar dependencias del sistema para Chrome
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    wget \
-    chromium \
-    chromium-driver \
-    # Dependencias adicionales requeridas
-    gcc \
-    g++ \
-    libglib2.0-0 \
-    libnss3 \
-    libgconf-2-4 \
-    libfontconfig1 \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
+# Instalar dependencias necesarias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar archivo de requerimientos
 COPY requirements.txt .
+
+# Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar el código de la app
 COPY . .
 
+# Ejecutar script principal
 CMD ["python", "-u", "src/main.py"]

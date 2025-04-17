@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mongo
+      - redis
 
   # Servicio de base de datos MongoDB
   mongo:
@@ -46,3 +47,12 @@ services:
     networks:
       - trafico-network
     restart: unless-stopped
+
+    redis:
+      image: redis:7
+      container_name: waze-cache
+      ports:
+        - "6379:6379"
+      networks:
+        - trafico-network
+      restart: unless-stopped
