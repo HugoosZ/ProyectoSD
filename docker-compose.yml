@@ -1,3 +1,4 @@
+version: "3.8"
 
 networks:
   trafico-network:
@@ -7,6 +8,7 @@ volumes:
   db-data:
 
 services:
+
   # Servicio de scraping de Waze
   scraper:
     build:
@@ -48,11 +50,23 @@ services:
       - trafico-network
     restart: unless-stopped
 
-    redis:
-      image: redis:7
-      container_name: waze-cache
-      ports:
-        - "6379:6379"
-      networks:
-        - trafico-network
-      restart: unless-stopped
+  # Servicio de cache con Redis
+  redis:
+    image: redis:7
+    container_name: waze-cache
+    ports:
+      - "6379:6379"
+    networks:
+      - trafico-network
+    restart: unless-stopped
+
+  # Servicio que administra el cache y políticas
+
+  cache-service:
+    build:
+      context: ./cache-service
+    container_name: waze-cache-service
+    env_file: redis.env  # Esto debe estar dentro del servicio, no en la raíz
+    networks:
+      - trafico-network
+    restart: unless-stopped
