@@ -3,9 +3,9 @@ import time
 from datetime import datetime
 from pymongo import MongoClient
 
-# 1. Conexión a MongoDB Atlas :contentReference[oaicite:0]{index=0}
+# 1. Conexión a MongoDB Atlas
 client = MongoClient(
-    "mongodb+srv://waze_user:qwnuC6FRFUXsqTAw@wazeevents.3ykhrti.mongodb.net/?retryWrites=true&w=majority&appName=WazeEvents"
+    "MONGO_URI"
 )
 db = client["waze_traffic"]
 collection = db["events"]

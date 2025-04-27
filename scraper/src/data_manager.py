@@ -6,7 +6,6 @@ from pymongo.server_api import ServerApi
 class MongoDBManager:
     client = MongoClient(os.getenv("MONGODB_URI"), server_api=ServerApi('1'))
     print("Conectando a MongoDB...")
-    
 
 # Send a ping to confirm a successful connection
     try:
