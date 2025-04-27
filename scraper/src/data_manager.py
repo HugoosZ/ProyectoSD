@@ -1,17 +1,20 @@
 import os
-from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+
 
 class MongoDBManager:
-    def __init__(self):
-        self.client = MongoClient(
-            host=os.getenv("MONGO_HOST", "mongo"),
-            port=int(os.getenv("MONGO_PORT", 27017)),
-            username=os.getenv("MONGO_USER", "waze_user"),
-            password=os.getenv("MONGO_PASSWORD", "securepassword"),
-            authSource=os.getenv("MONGO_DB", "waze_events")
-        )
-        self.db = self.client[os.getenv("MONGO_DB", "waze_events")]
-        
+    client = MongoClient(os.getenv("MONGODB_URI"), server_api=ServerApi('1'))
+    print("SEXOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+    
+
+# Send a ping to confirm a successful connection
+    try:
+        client.admin.command('ping')
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(e)
+
     def insert_data(self, collection_name, data):
         collection = self.db[collection_name]
         return collection.insert_many(data)
