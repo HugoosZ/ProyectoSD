@@ -3,3 +3,4 @@ requests>=2.0  # u otras dependencias que uses
 selenium>=4.0.0
 webdriver-manager>=3.0.0  # Para manejar automáticamente los drivers (Chrome, Firefox, etc.)
 pandas>=2.0.0  # <-- Agrega esta línea
+dotenv>=1.0.0 

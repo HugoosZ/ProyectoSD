@@ -21,6 +21,8 @@ services:
     networks:
       - trafico-network
     restart: unless-stopped
+    env_file:
+      - mongo.env
     depends_on:
       - mongo
       - redis

@@ -1,12 +1,16 @@
 import requests
 import time
+import os
 from datetime import datetime
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
+# Cargar variables de entorno desde mongo.env
+load_dotenv(dotenv_path='mongo.env')
+
+mongo_uri = os.getenv("MONGO_URI")
 # 1. Conexión a MongoDB Atlas
-client = MongoClient(
-    "MONGO_URI"
-)
+client = MongoClient(mongo_uri)
 db = client["waze_traffic"]
 collection = db["events"]
 
