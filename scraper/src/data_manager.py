@@ -5,13 +5,13 @@ from pymongo.server_api import ServerApi
 
 class MongoDBManager:
     client = MongoClient(os.getenv("MONGODB_URI"), server_api=ServerApi('1'))
-    print("SEXOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+    print("Conectando a MongoDB...")
     
 
 # Send a ping to confirm a successful connection
     try:
         client.admin.command('ping')
-        print("Pinged your deployment. You successfully connected to MongoDB!")
+        print("Conexion a MongoDB exitosa")
     except Exception as e:
         print(e)
 
