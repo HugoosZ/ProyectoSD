@@ -1,3 +1,7 @@
+# Archivos de entorno
 .env
 redis.env
 *.env
+
+# Archivos de sistema (macOS)
+.DS_Store
