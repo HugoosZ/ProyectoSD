@@ -15,7 +15,7 @@ COLLECTION_NAME = "events"
 
 # Parámetros del generador
 TOTAL_CONSULTAS = 500  # Número total de consultas a simular
-DISTRIBUCION = os.getenv("TRAFFIC_DISTRIBUTION", "uniforme")  # "uniforme" o "exponencial"
+DISTRIBUCION = "exponencial"  # "uniforme" o "exponencial"
 
 # Configurar conexión
 client = MongoClient(MONGO_URI)
