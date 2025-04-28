@@ -7,7 +7,7 @@ load_dotenv(dotenv_path='mongo.env')
 
 class MongoStorage:
     def __init__(self):
-        print("✅ MongoStorage inicializado correctamente.")  # <-- Añade este print
+        print("✅ MongoStorage inicializado correctamente.")  
         mongo_uri = os.getenv("MONGO_URI")
         if not mongo_uri:
             raise ValueError("❌ No se encontró la variable de entorno MONGO_URI")
