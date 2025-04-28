@@ -2,7 +2,6 @@ from distributions import uniform_distribution, exponential_distribution
 import time
 import sys
 
-#sys.path.insert(0, "/storage/src")
 sys.path.insert(0, "/storage/src")
 sys.path.insert(0, "/cache-service/src")
 

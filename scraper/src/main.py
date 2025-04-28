@@ -6,7 +6,6 @@ import os
 sys.path.insert(0, "/storage/src")
 from mongo_storage import MongoStorage
 
-mongo_storage = MongoStorage()
 
 def main():
     storage = MongoStorage()
