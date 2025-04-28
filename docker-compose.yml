@@ -9,6 +9,16 @@ volumes:
 
 
 services:
+  mongo:
+    image: mongo:6
+    container_name: waze-db
+    ports:
+      - "27017:27017"  # Exponer el puerto estándar de MongoDB
+    volumes:
+      - db-data:/data/db #Izquierda del : es lo que esta en local, y lo que esta a la derecha es lo que se monta en el docker
+    networks:
+      - trafico-network
+    restart: unless-stopped
 
   # Servicio de scraping de Waze
   scraper:
@@ -16,40 +26,18 @@ services:
       context: ./scraper
       dockerfile: Dockerfile
     container_name: waze-scraper
-    environment:
-      - MONGO_HOST=mongo
-      - MONGO_PORT=27017
-      - MONGO_DB=waze_events
-      - MONGO_USER=waze_user
-      - MONGO_PASSWORD=securepassword
-      - TARGET_COUNT=10000
-      - CITY=santiago
-      - COUNTRY=chile
     volumes:
       - ./scraper/src:/app/src
+      - ./storage:/storage
+
     networks:
       - trafico-network
     restart: unless-stopped
+    env_file:
+      - mongo.env
     depends_on:
       - mongo
       - redis
-
-  # Servicio de base de datos MongoDB
-  mongo:
-    image: mongo:6.0
-    container_name: waze-db
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=securepassword
-      - MONGO_INITDB_DATABASE=waze_events
-    ports:
-      - "27017:27017"
-    volumes:
-      - db-data:/data/db
-      - ./storage/init-scripts:/docker-entrypoint-initdb.d
-    networks:
-      - trafico-network
-    restart: unless-stopped
 
   # Servicio de cache con Redis
   redis:
@@ -86,3 +74,16 @@ services:
       - redis
     restart: unless-stopped
   
+  storage:
+    build:
+      context: ./storage
+    container_name: waze-storage
+    volumes:
+      - ./storage:/storage
+    env_file:
+      - mongo.env
+    networks:
+      - trafico-network
+    depends_on:
+      - mongo
+    restart: unless-stopped
