@@ -3,10 +3,20 @@ from waze_scraper import obtener_eventos
 import sys
 import os
 
-# Asegurarnos que el path al módulo storage esté disponible
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../storage/src'))
+# El módulo storage está instalado via pip, no necesitamos agregar un path
+# El import debería funcionar directamente
+
+
+# scraper/src/main.py
+
+import sys
+sys.path.insert(0, "/storage/src")
 
 from mongo_storage import MongoStorage
+
+mongo_storage = MongoStorage()
+
+
 
 def main():
     storage = MongoStorage()
