@@ -11,3 +11,6 @@ redis.env
 *.env
 .DS_Store
 >>>>>>> leonBranch
+
+__pycache__/
+*.py[cod]
