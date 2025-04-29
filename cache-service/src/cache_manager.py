@@ -4,6 +4,7 @@ from typing import Optional
 
 class RedisCache:
     def __init__(self):
+        print("✅ Redis inicializado correctamente.")  
         self.client = redis.Redis(
             host=os.getenv("REDIS_HOST", "redis"),  # Default para Docker
             port=int(os.getenv("REDIS_PORT", 6379)),
