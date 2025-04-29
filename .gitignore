@@ -1,0 +1,10 @@
+# Archivos de entorno
+mongo.env
+redis.env
+
+# Archivos de sistema (macOS)
+.DS_Store
+
+# Pycache
+__pycache__/
+*.py[cod]*.pyc
