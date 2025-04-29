@@ -2,4 +2,3 @@ pymongo
 python-dotenv
 numpy
 redis
-json
