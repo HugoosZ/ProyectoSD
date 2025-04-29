@@ -25,13 +25,11 @@ TOTAL_CONSULTAS = 500
 DISTRIBUCION = "uniforme"
 
 
-
 def generar_intervalos_uniforme(total_consultas, intervalo_min, intervalo_max):
     return np.random.uniform(intervalo_min, intervalo_max, total_consultas)
 
 def generar_intervalos_exponencial(total_consultas, media_intervalo):
     return np.random.exponential(media_intervalo, total_consultas)
-
 
 
 def generar_trafico():

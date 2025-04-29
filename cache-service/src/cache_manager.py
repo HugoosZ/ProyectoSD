@@ -66,7 +66,7 @@ class RedisCache:
         else:
             print(f"🆕 La clave '{clave}' no existía. Será insertada.")
 
-        self.client.set(clave, valor, ex=600)
+        self.client.set(clave, valor)
         
 
     def limpiar_cache(self):
