@@ -1,5 +1,16 @@
+<<<<<<< Updated upstream
 
 redis>=4.5.5
 pymongo>=4.3.3
 numpy>=1.24.0
 scipy>=1.10.0
+=======
+pymongo
+python-dotenv
+numpy
+redis
+json
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
