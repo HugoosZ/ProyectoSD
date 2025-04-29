@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 import os
 import random
 import time
@@ -25,7 +23,7 @@ REDIS_DB = int(os.getenv("REDIS_DB", 0))
 
 # Parámetros del generador
 TOTAL_CONSULTAS = 500
-DISTRIBUCION = os.getenv("TRAFFIC_DISTRIBUTION", "uniforme")  # Ahora se lee desde env
+DISTRIBUCION = "uniforme"
 
 # Conexión a MongoDB
 client = MongoClient(MONGO_URI)
@@ -83,9 +81,4 @@ def generar_trafico():
 
 if __name__ == "__main__":
     print(f"🚀 Iniciando generador de tráfico usando distribución: {DISTRIBUCION}")
-<<<<<<< Updated upstream
     generar_trafico()
->>>>>>> Stashed changes
-=======
-    generar_trafico()
->>>>>>> Stashed changes
