@@ -1,16 +1,10 @@
-<<<<<<< HEAD
 # Archivos de entorno
 .env
 redis.env
 *.env
 
 # Archivos de sistema (macOS)
-=======
-mongo.env
-redis.env
-*.env
 .DS_Store
->>>>>>> leonBranch
 
 __pycache__/
 *.py[cod]
