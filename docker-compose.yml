@@ -50,7 +50,7 @@ services:
     volumes:
       #- ./redis/redis.conf:/usr/local/etc/redis/redis.conf
       - redis-data:/data
-    command: ["redis-server", "--maxmemory 100mb", "--maxmemory-policy allkeys-lru"]
+    command: ["redis-server", "--maxmemory 10mb", "--maxmemory-policy allkeys-lru"]
     # redis-server /usr/local/etc/redis/redis.conf
     networks:
       - trafico-network
