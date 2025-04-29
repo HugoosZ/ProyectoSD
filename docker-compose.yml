@@ -78,7 +78,6 @@ services:
       - ./cache-service:/cache-service
     networks:
       - trafico-network
-
     env_file:
       - mongo.env # Si no se ponen estos env, no pesca, aunque no este en el 
       - redis.env

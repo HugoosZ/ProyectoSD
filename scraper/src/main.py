@@ -11,9 +11,15 @@ def main():
     storage = MongoStorage()
 
     while True:
-        print("\n⏱️ Scrapeando eventos...")
+<<<<<<< HEAD
+        #print("\n⏱️ Scrapeando eventos...")
         # eventos = obtener_eventos()
         # storage.guardar_eventos(eventos)
+=======
+        #print("\n⏱️ Scrapeando eventos...")
+        #eventos = obtener_eventos()
+        #storage.guardar_eventos(eventos)
+>>>>>>> dabd4e391bd7c1790d62fe6bfab0c8f87f32645f
         time.sleep(120) # Espera de 2 minutos entre cada scrapeo
 
 if __name__ == "__main__":
