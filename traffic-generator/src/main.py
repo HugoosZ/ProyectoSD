@@ -56,10 +56,10 @@ def enviar_evento_a_cache(evento):
     if not evento:
         return
 
+    evento.pop('_id', None)  # 👈 Elimina el campo '_id' si existe
     clave = f"{evento.get('tipo')}_{evento.get('lat')}_{evento.get('lon')}_{evento.get('subtipo')}"
     valor = json.dumps(evento)
 
-    # Guardar en Redis con tiempo de expiración opcional (ej: 600s = 10 minutos)
     r.set(clave, valor, ex=600)
     print(f"📥 Evento enviado al cache: {clave}")
 
