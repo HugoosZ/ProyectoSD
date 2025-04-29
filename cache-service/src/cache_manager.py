@@ -2,6 +2,8 @@ import redis
 import os
 from typing import Optional
 import json
+from pymongo import MongoClient
+from bson import ObjectId  
 
 
 class RedisCache:
@@ -48,11 +50,26 @@ class RedisCache:
         if not evento:
             return
 
-        evento.pop('_id', None)  # 👈 Elimina el campo '_id' si existe
         
-        clave = f"{evento.get('tipo')}_{evento.get('lat')}_{evento.get('lon')}_{evento.get('subtipo')}"
-        print(clave)
+        # clave = f"{evento.get('ciudad')}_{evento.get('tipo')}" si quiero usar como llave algo que no sea id basta con esto 
+
+        if "_id" in evento and isinstance(evento["_id"], ObjectId):
+            evento["_id"] = str(evento["_id"])
+
+        clave = evento["_id"]
         valor = json.dumps(evento)
 
+        valor_existente = self.client.get(clave)
+        if valor_existente:
+            print(f"🔁🔁🔁🔁🔁 La clave '{clave}' ya existía en cache. Será actualizada.")
+            print(f"📤 Valor anterior: {valor_existente}")
+        else:
+            print(f"🆕 La clave '{clave}' no existía. Será insertada.")
+
         self.client.set(clave, valor, ex=600)
-        print(f"📥 Evento enviado al cache: {clave}")
+        
+
+    def limpiar_cache(self):
+        """Elimina todas las claves del Redis actual (flush de la base de datos)."""
+        self.client.flushdb()
+        print("🧹 Cache de Redis limpiado completamente.")

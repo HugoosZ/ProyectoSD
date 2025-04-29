@@ -18,6 +18,8 @@ from cache_manager import RedisCache
 mongo = MongoStorage()
 redis = RedisCache()
 
+#redis.limpiar_cache() Activar para borrar el cache
+
 # Parámetros del generador
 TOTAL_CONSULTAS = 500
 DISTRIBUCION = "uniforme"
