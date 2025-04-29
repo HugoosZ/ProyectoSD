@@ -1,7 +1,6 @@
 # Archivos de entorno
-.env
+mongo.env
 redis.env
-*.env
 
 # Archivos de sistema (macOS)
 .DS_Store
