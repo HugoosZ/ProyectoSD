@@ -1,7 +1,7 @@
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
-
+import random 
 # Cargar variables de entorno
 load_dotenv(dotenv_path='mongo.env')
 
@@ -25,7 +25,7 @@ class MongoStorage:
         except Exception as e:
             print("❌ Error al insertar eventos:", e)
 
-    def obtener_eventos(self, limite=None):
+    def obtener_eventos(self, limite=10):
         try:
             if limite:
                 eventos = list(self.collection.find().limit(limite))
@@ -37,3 +37,15 @@ class MongoStorage:
         except Exception as e:
             print("❌ Error al obtener eventos:", e)
             return []
+
+    def obtener_evento_aleatorio(self):
+        total_documentos = self.collection.estimated_document_count()
+        if total_documentos == 0:
+            print("⚠️ No hay eventos almacenados")
+            return None
+
+        indice_aleatorio = random.randint(0, total_documentos - 1)
+        evento = self.collection.find().skip(indice_aleatorio).limit(1)
+        for doc in evento:
+            return doc
+        return None
