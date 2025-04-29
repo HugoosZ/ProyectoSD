@@ -1,26 +1,26 @@
-
 networks:
   trafico-network:
     driver: bridge
 
 volumes:
   db-data:
-  redis-data:
-
+  redis-uniform-lru-data:
+  redis-uniform-lfu-data:
+  redis-exp-lru-data:
+  redis-exp-lfu-data:
 
 services:
   mongo:
     image: mongo:6
     container_name: waze-db
     ports:
-      - "27017:27017"  # Exponer el puerto estándar de MongoDB
+      - "27017:27017"
     volumes:
-      - db-data:/data/db #Izquierda del : es lo que esta en local, y lo que esta a la derecha es lo que se monta en el docker
+      - db-data:/data/db
     networks:
       - trafico-network
     restart: unless-stopped
 
-  # Servicio de scraping de Waze
   scraper:
     build:
       context: ./scraper
@@ -29,7 +29,6 @@ services:
     volumes:
       - ./scraper/src:/app/src
       - ./storage:/storage
-
     networks:
       - trafico-network
     restart: unless-stopped
@@ -37,35 +36,69 @@ services:
       - mongo.env
     depends_on:
       - mongo
-      - redis
+      - redis-uniform-lru
+      - redis-uniform-lfu
+      - redis-exp-lru
+      - redis-exp-lfu
 
-  # Servicio de cache con Redis
-  redis:
+  # Redis uniformes (LRU y LFU)
+  redis-uniform-lru:
     image: redis:7-alpine
-    container_name: waze-cache
-    
+    container_name: redis-uniform-lru
     ports:
-      - "6379:6379"    # Puerto estándar (para tus servicios)
-        # Establece el límite de memoria (ej: 1GB)
+      - "6380:6379"
     volumes:
-      #- ./redis/redis.conf:/usr/local/etc/redis/redis.conf
-      - redis-data:/data
-    command: ["redis-server", "--maxmemory 10mb", "--maxmemory-policy allkeys-lru"]
-    # redis-server /usr/local/etc/redis/redis.conf
+      - redis-uniform-lru-data:/data
+    command: redis-server --maxmemory 10mb --maxmemory-policy allkeys-lru
     networks:
       - trafico-network
     restart: unless-stopped
-  # Servicio que administra el cache y políticas
+
+  redis-uniform-lfu:
+    image: redis:7-alpine
+    container_name: redis-uniform-lfu
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis-uniform-lfu-data:/data
+    command: redis-server --maxmemory 10mb --maxmemory-policy allkeys-lfu
+    networks:
+      - trafico-network
+    restart: unless-stopped
+
+  # Redis exponencial (LRU y LFU)
+  redis-exp-lru:
+    image: redis:7-alpine
+    container_name: redis-exp-lru
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis-exp-lru-data:/data
+    command: redis-server --maxmemory 10mb --maxmemory-policy allkeys-lru
+    networks:
+      - trafico-network
+    restart: unless-stopped
+
+  redis-exp-lfu:
+    image: redis:7-alpine
+    container_name: redis-exp-lfu
+    ports:
+      - "6383:6379"
+    volumes:
+      - redis-exp-lfu-data:/data
+    command: redis-server --maxmemory 10mb --maxmemory-policy allkeys-lfu
+    networks:
+      - trafico-network
+    restart: unless-stopped
 
   cache-service:
     build:
       context: ./cache-service
     container_name: waze-cache-service
-    env_file: redis.env  # Esto debe estar dentro del servicio, no en la raíz
+    env_file: redis.env
     networks:
       - trafico-network
     restart: unless-stopped
-
 
   traffic-generator:
     build:
@@ -79,13 +112,16 @@ services:
     networks:
       - trafico-network
     env_file:
-      - mongo.env # Si no se ponen estos env, no pesca, aunque no este en el 
+      - mongo.env
       - redis.env
     depends_on:
-      - mongo 
-      - redis
+      - mongo
+      - redis-uniform-lru
+      - redis-uniform-lfu
+      - redis-exp-lru
+      - redis-exp-lfu
     restart: no
-  
+
   storage:
     build:
       context: ./storage
