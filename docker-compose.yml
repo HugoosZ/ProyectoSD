@@ -46,8 +46,12 @@ services:
     
     ports:
       - "6379:6379"    # Puerto estándar (para tus servicios)
+        # Establece el límite de memoria (ej: 1GB)
     volumes:
+      #- ./redis/redis.conf:/usr/local/etc/redis/redis.conf
       - redis-data:/data
+    command: ["redis-server", "--maxmemory 100mb", "--maxmemory-policy allkeys-lru"]
+    # redis-server /usr/local/etc/redis/redis.conf
     networks:
       - trafico-network
     restart: unless-stopped
@@ -81,7 +85,7 @@ services:
     depends_on:
       - mongo 
       - redis
-    restart: unless-stopped
+    restart: no
   
   storage:
     build:
@@ -95,4 +99,4 @@ services:
       - trafico-network
     depends_on:
       - mongo
-    restart: unless-stopped
+    restart: no
