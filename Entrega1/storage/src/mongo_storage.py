@@ -2,6 +2,7 @@ import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import random 
+import numpy as np
 # Cargar variables de entorno
 load_dotenv(dotenv_path='mongo.env')
 
@@ -45,4 +46,12 @@ class MongoStorage:
             return None
 
         skip = random.randint(0, total - 1)
+        return self.collection.find().skip(skip).limit(1).next()
+    def obtener_evento_exponencial(self, beta=10): ###Todavia no termino esto pero podria funcionar
+
+        total = self.collection.count_documents({})
+        if total == 0:
+            return None
+        raw = np.random.exponential(scale=beta)
+        skip = int(raw) % total
         return self.collection.find().skip(skip).limit(1).next()
