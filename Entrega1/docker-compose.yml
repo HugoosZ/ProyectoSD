@@ -49,7 +49,7 @@ services:
       - "6380:6379"
     volumes:
       - redis-uniform-lru-data:/data
-    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 1mb --maxmemory-policy allkeys-lru
     networks:
       - trafico-network
     restart: unless-stopped
@@ -61,7 +61,7 @@ services:
       - "6381:6379"
     volumes:
       - redis-uniform-lfu-data:/data
-    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lfu
+    command: redis-server --maxmemory 1mb --maxmemory-policy allkeys-lfu
     networks:
       - trafico-network
     restart: unless-stopped
@@ -74,7 +74,7 @@ services:
       - "6382:6379"
     volumes:
       - redis-exp-lru-data:/data
-    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 1mb --maxmemory-policy allkeys-lru
     networks:
       - trafico-network
     restart: unless-stopped
@@ -86,7 +86,7 @@ services:
       - "6383:6379"
     volumes:
       - redis-exp-lfu-data:/data
-    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lfu
+    command: redis-server --maxmemory 1mb --maxmemory-policy allkeys-lfu
     networks:
       - trafico-network
     restart: unless-stopped
