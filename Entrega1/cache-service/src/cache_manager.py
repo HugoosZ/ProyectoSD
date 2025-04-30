@@ -45,7 +45,7 @@ class RedisCache:
         """Obtiene un valor o None si no existe."""
         return self.client.get(key)
     
-    def enviar_evento_a_cache(self,evento):
+    def enviar_evento_a_cache(self,evento,stats):
         """Envía el evento al cache Redis"""
         if not evento:
             return
@@ -59,10 +59,14 @@ class RedisCache:
         clave = evento["_id"]
         valor = json.dumps(evento)
 
+        stats["total"] += 1  # Cada llamada cuenta como una consulta
+
         valor_existente = self.client.get(clave)
         if valor_existente:
             print(f"🔁🔁🔁🔁🔁 La clave '{clave}' ya existía en cache. Será actualizada.")
             print(f"📤 Valor anterior: {valor_existente}")
+            stats["hits"] += 1
+
         else:
             print(f"🆕 La clave '{clave}' no existía. Será insertada.")
 

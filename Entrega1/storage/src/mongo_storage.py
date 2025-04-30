@@ -39,7 +39,7 @@ class MongoStorage:
             print("❌ Error al obtener eventos:", e)
             return []
 
-    def obtener_evento_aleatorio(self):
+    def obtener_evento_uniforme(self):
         total = self.collection.count_documents({})
         if total == 0:
             print("⚠️ No hay eventos almacenados")
@@ -47,6 +47,7 @@ class MongoStorage:
 
         skip = random.randint(0, total - 1)
         return self.collection.find().skip(skip).limit(1).next()
+    
     def obtener_evento_exponencial(self, beta=10): ###Todavia no termino esto pero podria funcionar
 
         total = self.collection.count_documents({})
