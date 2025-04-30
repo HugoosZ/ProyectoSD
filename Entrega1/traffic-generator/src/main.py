@@ -34,7 +34,7 @@ def generar_intervalos_exponencial(total_consultas, media_intervalo):
 
 def generar_trafico():
     if DISTRIBUCION == "uniforme":
-        intervalos = generar_intervalos_uniforme(TOTAL_CONSULTAS, 0.5, 2.0)
+        intervalos = generar_intervalos_uniforme(TOTAL_CONSULTAS, 0.1, 1)
     elif DISTRIBUCION == "exponencial":
         intervalos = generar_intervalos_exponencial(TOTAL_CONSULTAS, 1.0)
     else:

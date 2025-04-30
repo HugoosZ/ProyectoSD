@@ -39,13 +39,10 @@ class MongoStorage:
             return []
 
     def obtener_evento_aleatorio(self):
-        total_documentos = self.collection.estimated_document_count()
-        if total_documentos == 0:
+        total = self.collection.count_documents({})
+        if total == 0:
             print("⚠️ No hay eventos almacenados")
             return None
 
-        indice_aleatorio = random.randint(0, total_documentos - 1)
-        evento = self.collection.find().skip(indice_aleatorio).limit(1)
-        for doc in evento:
-            return doc
-        return None
+        skip = random.randint(0, total - 1)
+        return self.collection.find().skip(skip).limit(1).next()
