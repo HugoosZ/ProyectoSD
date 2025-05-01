@@ -48,11 +48,14 @@ class MongoStorage:
         skip = random.randint(0, total - 1)
         return self.collection.find().skip(skip).limit(1).next()
     
-    def obtener_evento_exponencial(self, beta=10): ###Todavia no termino esto pero podria funcionar
-
-        total = self.collection.count_documents({})
-        if total == 0:
+    def obtener_evento_exponencial(self,cantidad):
+        if cantidad == 0:
             return None
-        raw = np.random.exponential(scale=beta)
-        skip = int(raw) % total
-        return self.collection.find().skip(skip).limit(1).next()
+
+        beta = cantidad / 10  # Valor ajustable para obtener concentraciones distintas 
+        while True:
+            raw = int(np.random.exponential(scale=beta)) # Mientras mas pequeño beta mas concentrados estan las consultas en valores bajos
+            if raw < cantidad:
+                break
+
+        return self.collection.find().skip(raw).limit(1).next()
