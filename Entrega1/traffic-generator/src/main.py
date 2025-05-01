@@ -24,7 +24,7 @@ redis = RedisCache()
 # Parámetros del generador
 
 TOTAL_CONSULTAS = 3000
-DISTRIBUCION = "uniforme"
+DISTRIBUCION = "exponencial"
 
 
 
@@ -37,7 +37,7 @@ def generar_trafico():
             intervalo = np.random.uniform(0.1, 1.0)
 
         elif DISTRIBUCION == "exponencial":
-            evento = mongo.obtener_evento_exponencial()
+            evento = mongo.obtener_evento_exponencial(TOTAL_CONSULTAS)
             intervalo = np.random.exponential(1.0)
 
         else:
@@ -57,5 +57,5 @@ def generar_trafico():
     print(f"➕ Inserts nuevos: {stats['total'] - stats['hits']}")    
 
 if __name__ == "__main__":
-    print(f"🚀 Iniciando generador de tráfico usando distribución: {DISTRIBUCION}")
+    print(f"Iniciando generador de tráfico usando distribución: {DISTRIBUCION}")
     generar_trafico()
