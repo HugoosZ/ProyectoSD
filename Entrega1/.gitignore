@@ -8,3 +8,5 @@ redis.env
 # Pycache
 __pycache__/
 *.py[cod]*.pyc
+
+dump.rdb
