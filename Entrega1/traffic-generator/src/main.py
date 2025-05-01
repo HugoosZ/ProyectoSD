@@ -21,8 +21,6 @@ redis = RedisCache()
 
 #redis.limpiar_cache() #Activar para borrar el cache
 
-# Parámetros del generador
-
 TOTAL_CONSULTAS = 3000
 DISTRIBUCION = "exponencial"
 
@@ -51,10 +49,10 @@ def generar_trafico():
     
         time.sleep(intervalo)
 
-    print(f"\n📊 Estadísticas finales:")
-    print(f"🔢 Total de consultas: {stats['total']}")
-    print(f"✅ Hits (ya estaba en cache): {stats['hits']}")
-    print(f"➕ Inserts nuevos: {stats['total'] - stats['hits']}")    
+    print(f"\n Estadísticas finales:")
+    print(f" Total de consultas: {stats['total']}")
+    print(f" Hits (ya estaba en cache): {stats['hits']}")
+    print(f" Inserts nuevos: {stats['total'] - stats['hits']}")    
 
 if __name__ == "__main__":
     print(f"Iniciando generador de tráfico usando distribución: {DISTRIBUCION}")

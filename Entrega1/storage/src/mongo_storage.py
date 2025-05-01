@@ -3,7 +3,6 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 import random 
 import numpy as np
-# Cargar variables de entorno
 load_dotenv(dotenv_path='mongo.env')
 
 class MongoStorage:
@@ -52,7 +51,7 @@ class MongoStorage:
         if cantidad == 0:
             return None
 
-        beta = cantidad / 10  # Valor ajustable para obtener concentraciones distintas 
+        beta = cantidad / 5  # Valor ajustable para obtener concentraciones distintas 
         while True:
             raw = int(np.random.exponential(scale=beta)) # Mientras mas pequeño beta mas concentrados estan las consultas en valores bajos
             if raw < cantidad:

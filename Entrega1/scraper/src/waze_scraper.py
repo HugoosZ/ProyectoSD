@@ -25,7 +25,6 @@ def obtener_eventos():
 
     data = response.json()
 
-    # Recorrer tanto "alerts" como "traffic"
     for alerta in data.get("alerts", []) + data.get("traffic", []):
         # Crear la clave única para cada evento
         clave = f"{alerta.get('type')}_{alerta['location']['y']}_{alerta['location']['x']}_{alerta.get('subtype')}"
@@ -41,10 +40,10 @@ def obtener_eventos():
             "lon": alerta["location"]["x"]
         }
 
-        # Si no existe el evento o cambió su hora, lo guardamos y actualizamos
+        # Si no existe el evento o cambió su hora, se guardama y actualizama
         if clave not in eventos_unicos or eventos_unicos[clave]["hora"] != hora:
             eventos_unicos[clave] = nuevo_evento
-            eventos.append(nuevo_evento)  # Solo agregamos eventos nuevos o actualizados
+            eventos.append(nuevo_evento)  # Solo nuevos eventos nuevos o actualizados
             print("🆕 Evento nuevo o actualizado:", nuevo_evento)
 
     return eventos

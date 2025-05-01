@@ -64,7 +64,7 @@ class RedisCache:
         valor_existente = self.client.get(clave)
         if valor_existente:
             print(f"🔁🔁🔁🔁🔁 La clave '{clave}' ya existía en cache. Será actualizada.")
-            print(f"📤 Valor anterior: {valor_existente}")
+            print(f"Valor anterior: {valor_existente}")
             stats["hits"] += 1
 
         else:
