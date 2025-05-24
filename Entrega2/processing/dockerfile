@@ -1,0 +1,31 @@
+FROM python:3.9-slim
+
+# 1. Instala dependencias básicas
+RUN apt-get update && \
+    apt-get install -y \
+    openjdk-17-jre-headless \
+    wget \
+    tar && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+
+RUN wget https://downloads.apache.org/pig/pig-0.17.0/pig-0.17.0.tar.gz && \
+    tar -xzf pig-0.17.0.tar.gz && \
+    mv pig-0.17.0 /opt/pig && \
+    rm pig-0.17.0.tar.gz
+
+# 3. Configurar entorno Pig
+ENV PIG_HOME=/opt/pig
+ENV PATH=$PATH:$PIG_HOME/bin    
+
+# 2. Instala solo las dependencias necesarias
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 3. Copia los archivos de procesamiento
+WORKDIR /app
+COPY ./src ./src
+
+# 4. Comando de ejecución
+CMD ["python", "-u", "src/main.py"]

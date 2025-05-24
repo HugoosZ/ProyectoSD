@@ -1,0 +1,101 @@
+networks:
+  trafico-network:
+    driver: bridge
+
+volumes:
+  db-data:
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: waze-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - db-data:/data/db
+    networks:
+      - trafico-network
+    restart: unless-stopped
+
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: waze-scraper
+    volumes:
+      - ./scraper/src:/app/src
+      - ./storage:/storage
+    networks:
+      - trafico-network
+    restart: unless-stopped
+    env_file:
+      - mongo.env
+    depends_on:
+      - mongo
+
+  filtering:
+    build:
+      context: ./filtering
+      dockerfile: Dockerfile
+    container_name: waze-filtering
+    volumes:
+      - ./filtering/src:/filtering
+      - ./storage:/storage
+      #- ./cache-service:/cache-service
+    networks:
+      - trafico-network
+    env_file:
+      - mongo.env
+      #- redis.env
+    depends_on:
+      - mongo
+      #- redis-uniform-lru
+      #- redis-uniform-lfu
+      #- redis-exp-lru
+      #- redis-exp-lfu
+    restart: no
+
+  storage:
+    build:
+      context: ./storage
+    container_name: waze-storage
+    volumes:
+      - ./storage:/storage
+    env_file:
+      - mongo.env
+    networks:
+      - trafico-network
+    depends_on:
+      - mongo
+      - hadoop
+    restart: no
+
+  processing:
+    build:
+      context: ./processing
+      dockerfile: Dockerfile
+    container_name: waze-processing
+    volumes:
+      - ./processing/src:/processing
+      - ./storage:/storage
+    networks:
+      - trafico-network
+    env_file:
+      - mongo.env
+    depends_on:
+      - mongo
+      - hadoop
+    restart: no
+    
+  hadoop:
+    image: apache/hadoop:3.3.6
+    container_name: hadoop
+    ports:
+      - "50070:50070"  # Web UI
+      - "8088:8088"    # Resource Manager
+      - "9000:9000"    # HDFS
+    networks:
+      - trafico-network
+    volumes:
+      - ./hadoop-data:/hadoop/dfs/data
+      - ./processing/src:/processing
