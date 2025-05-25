@@ -1,40 +1,83 @@
 import time
 import sys
 import json
+import subprocess
 from datetime import datetime
 
+def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
+    """Verifica que Hadoop esté funcionando correctamente con reintentos"""
+    print("\n🔍 Verificando conexión con Hadoop...")
+    
+    for intento in range(max_intentos):
+        try:
+            # Verificar que el namenode esté respondiendo
+            resultado = subprocess.run("hdfs dfsadmin -report", shell=True, capture_output=True, text=True)
+            if resultado.returncode == 0:
+                print("✅ Conexión con Hadoop establecida correctamente")
+                return True
+            else:
+                print(f"❌ Intento {intento + 1}/{max_intentos} fallido:")
+                print(resultado.stderr)
+                if intento < max_intentos - 1:
+                    print(f"⏳ Esperando {espera_entre_intentos} segundos antes del siguiente intento...")
+                    time.sleep(espera_entre_intentos)
+        except Exception as e:
+            print(f"❌ Intento {intento + 1}/{max_intentos} fallido: {str(e)}")
+            if intento < max_intentos - 1:
+                print(f"⏳ Esperando {espera_entre_intentos} segundos antes del siguiente intento...")
+                time.sleep(espera_entre_intentos)
+    
+    print("❌ No se pudo establecer conexión con Hadoop después de varios intentos")
+    return False
 
-
-sys.path.insert(0, "/storage/src")
-from mongo_storage import MongoStorage
-
-mongo = MongoStorage()
-
+def crear_directorios_hdfs():
+    """Crea los directorios necesarios en HDFS"""
+    print("\n📁 Creando directorios en HDFS...")
+    try:
+        subprocess.run("hdfs dfs -mkdir -p /processing", shell=True, check=True)
+        print("✅ Directorios creados correctamente")
+        return True
+    except Exception as e:
+        print(f"❌ Error al crear directorios: {str(e)}")
+        return False
 
 def procesar_con_pig(eventos):
-    """Simula el procesamiento con Pig (versión simplificada)"""
-    print("\n⚙️ Procesando datos con Pig (simulación)...")
+    """Ejecuta el procesamiento con Apache Pig"""
+    print("\n⚙️ Procesando datos con Apache Pig...")
     
-    # Aquí iría tu lógica real con Pig
-    # Por ahora simulamos algunas operaciones básicas
-    
-    # 1. Conteo por tipo de incidente
-    conteo_tipos = {}
-    for evento in eventos:
-        tipo = evento.get('type', 'DESCONOCIDO')
-        conteo_tipos[tipo] = conteo_tipos.get(tipo, 0) + 1
-    
-    # 2. Agrupación por comuna
-    comunas = set(e.get('comuna', 'SIN_COMUNA') for e in eventos)
-    
-    print("📊 Resultados del procesamiento:")
-    print(f" - Total eventos procesados: {len(eventos)}")
-    print(" - Conteo por tipo de incidente:")
-    for tipo, count in conteo_tipos.items():
-        print(f"   - {tipo}: {count}")
-    print(f" - Comunas encontradas: {len(comunas)}")
-    
-    return True
+    try:
+        # Copiar el archivo JSON a HDFS
+        subprocess.run("hdfs dfs -put /processing/data_for_pig.json /processing/", shell=True, check=True)
+        
+        # Ejecutar el script de Pig
+        comando = "pig -f /processing/src/pig/remove_duplicates.pig"
+        resultado = subprocess.run(comando, shell=True, capture_output=True, text=True)
+        
+        if resultado.returncode == 0:
+            print("✅ Procesamiento con Pig completado exitosamente")
+            print("\n📊 Resultados del procesamiento:")
+            print(resultado.stdout)
+            
+            # Copiar los resultados de vuelta al sistema de archivos local
+            subprocess.run("hdfs dfs -get /processing/unique_data /processing/", shell=True, check=True)
+            subprocess.run("hdfs dfs -get /processing/count_by_type /processing/", shell=True, check=True)
+            subprocess.run("hdfs dfs -get /processing/sorted_data /processing/", shell=True, check=True)
+            
+            # Mostrar resumen de resultados
+            print("\n📈 Resumen de resultados:")
+            print("- Datos únicos guardados en /processing/unique_data")
+            print("- Conteo por tipo guardado en /processing/count_by_type")
+            print("- Datos ordenados guardados en /processing/sorted_data")
+            
+            return True
+        else:
+            print("❌ Error en el procesamiento con Pig:")
+            print(resultado.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error al ejecutar Pig: {str(e)}")
+        return False
 
 def exportar_datos_para_pig(eventos, archivo_salida='/processing/data_for_pig.json'):
     """Exporta datos en formato compatible con Pig"""
@@ -56,27 +99,22 @@ def main():
     print("  INICIO DE VERIFICACIÓN DEL SISTEMA")
     print("="*50)
     
-
-    # 3. Obtener todos los eventos
-    print("\n📥 Obteniendo eventos desde MongoDB...")
-    mongo = MongoStorage()
-    eventos = mongo.obtener_todos_los_eventos()
+    # Verificar Hadoop
+    if not verificar_hadoop():
+        print("❌ No se pudo establecer conexión con Hadoop. Saliendo...")
+        sys.exit(1)
     
-    if not eventos:
-        print("❌ No se pueden procesar eventos vacíos")
-        return
+    # Crear directorios en HDFS
+    if not crear_directorios_hdfs():
+        print("❌ No se pudieron crear los directorios en HDFS. Saliendo...")
+        sys.exit(1)
     
-    # 4. Exportar datos para Pig (formato JSON)
-    if not exportar_datos_para_pig(eventos):
-        return
+    # Por ahora, solo mantenemos el sistema en ejecución
+    print("\n✅ Sistema inicializado correctamente")
+    print("🔄 Esperando datos para procesar...")
     
-    # 5. Procesar datos (simulación de Pig)
-    if not procesar_con_pig(eventos):
-        return
-    
-    print("\n" + "="*50)
-    print("  VERIFICACIÓN COMPLETADA CON ÉXITO")
-    print("="*50)
+    while True:
+        time.sleep(60)  # Esperar 1 minuto antes de la siguiente verificación
 
 if __name__ == "__main__":
     main()

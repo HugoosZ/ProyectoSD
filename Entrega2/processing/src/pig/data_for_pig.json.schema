@@ -1,0 +1,26 @@
+{
+    "type": "object",
+    "properties": {
+        "type": {"type": "string"},
+        "severity": {"type": "integer"},
+        "timestamp": {"type": "long"},
+        "location": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "double"},
+                "y": {"type": "double"}
+            }
+        },
+        "description": {"type": "string"},
+        "street": {"type": "string"},
+        "city": {"type": "string"},
+        "country": {"type": "string"},
+        "jamUuid": {"type": "string"},
+        "speedKMH": {"type": "integer"},
+        "length": {"type": "integer"},
+        "delay": {"type": "integer"},
+        "blockType": {"type": "string"},
+        "blockDescription": {"type": "string"},
+        "blockingAlertUuid": {"type": "string"}
+    }
+} 
