@@ -1,5 +1,5 @@
 -- Cargar datos limpios desde HDFS
-clean_data = LOAD '/data/data_for_pig.json' USING JsonLoader('type:chararray, location:chararray, timestamp:long');
+clean_data = LOAD '/data/data_for_pig.json' USING JsonLoader('tipo:chararray, ubicacion:chararray, hora:long');
 
 -- Filtrar por tipo de incidente
 accidentes = FILTER clean_data BY tipo == 'ACCIDENT';
