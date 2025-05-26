@@ -6,6 +6,7 @@ networks:
 
 volumes:
   db-data:
+  processing-results:
 
 services:
 
@@ -17,6 +18,7 @@ services:
     volumes:
       - ./processing:/app
       - ./hadoop-data:/hadoop-data
+      - ./processing/results:/processing
 
     networks:
       - trafico-network

@@ -3,6 +3,7 @@ import sys
 import json
 import subprocess
 from datetime import datetime
+import os
 
 def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
     """Verifica que Hadoop esté funcionando correctamente con reintentos"""
@@ -46,11 +47,18 @@ def procesar_con_pig(eventos):
     print("\n⚙️ Procesando datos con Apache Pig...")
     
     try:
+        # Eliminar el archivo anterior si existe en HDFS
+        subprocess.run("hdfs dfs -rm -f /processing/data_for_pig.json", shell=True)
+        # Eliminar los directorios de salida si existen en HDFS
+        subprocess.run("hdfs dfs -rm -r -f /processing/data_unique", shell=True)
+        subprocess.run("hdfs dfs -rm -r -f /processing/event_counts", shell=True)
+        subprocess.run("hdfs dfs -rm -r -f /processing/filtered_events", shell=True)
+        subprocess.run("hdfs dfs -rm -r -f /processing/sorted_events", shell=True)
         # Copiar el archivo JSON a HDFS
-        subprocess.run("hdfs dfs -put /processing/data_for_pig.json /processing/", shell=True, check=True)
+        subprocess.run("hdfs dfs -put /app/src/data_for_pig.json /processing/", shell=True, check=True)
         
         # Ejecutar el script de Pig
-        comando = "pig -f /processing/src/pig/remove_duplicates.pig"
+        comando = "pig -f /app/src/pig/remove_duplicates.pig"
         resultado = subprocess.run(comando, shell=True, capture_output=True, text=True)
         
         if resultado.returncode == 0:
@@ -58,16 +66,21 @@ def procesar_con_pig(eventos):
             print("\n📊 Resultados del procesamiento:")
             print(resultado.stdout)
             
+            # Crear el directorio local /processing si no existe
+            if not os.path.exists('/processing'):
+                os.makedirs('/processing')
             # Copiar los resultados de vuelta al sistema de archivos local
-            subprocess.run("hdfs dfs -get /processing/unique_data /processing/", shell=True, check=True)
-            subprocess.run("hdfs dfs -get /processing/count_by_type /processing/", shell=True, check=True)
-            subprocess.run("hdfs dfs -get /processing/sorted_data /processing/", shell=True, check=True)
+            subprocess.run("hdfs dfs -get /processing/data_unique /processing/", shell=True, check=True)
+            subprocess.run("hdfs dfs -get /processing/event_counts /processing/", shell=True, check=True)
+            subprocess.run("hdfs dfs -get /processing/filtered_events /processing/", shell=True, check=True)
+            subprocess.run("hdfs dfs -get /processing/sorted_events /processing/", shell=True, check=True)
             
             # Mostrar resumen de resultados
             print("\n📈 Resumen de resultados:")
-            print("- Datos únicos guardados en /processing/unique_data")
-            print("- Conteo por tipo guardado en /processing/count_by_type")
-            print("- Datos ordenados guardados en /processing/sorted_data")
+            print("- Datos únicos guardados en /processing/data_unique")
+            print("- Conteo por tipo guardado en /processing/event_counts")
+            print("- Eventos filtrados guardados en /processing/filtered_events")
+            print("- Datos ordenados guardados en /processing/sorted_events")
             
             return True
         else:
@@ -109,12 +122,25 @@ def main():
         print("❌ No se pudieron crear los directorios en HDFS. Saliendo...")
         sys.exit(1)
     
-    # Por ahora, solo mantenemos el sistema en ejecución
-    print("\n✅ Sistema inicializado correctamente")
-    print("🔄 Esperando datos para procesar...")
+    # Procesar los datos
+    print("\n📊 Iniciando procesamiento de datos...")
     
-    while True:
-        time.sleep(60)  # Esperar 1 minuto antes de la siguiente verificación
+    # Cargar datos del archivo JSON
+    try:
+        with open('/app/src/data_for_pig.json', 'r') as f:
+            eventos = [json.loads(line) for line in f]
+        print(f"✅ Se cargaron {len(eventos)} eventos para procesar")
+        
+        # Procesar con Pig
+        if procesar_con_pig(eventos):
+            print("✅ Procesamiento completado exitosamente")
+        else:
+            print("❌ Error en el procesamiento")
+            sys.exit(1)
+            
+    except Exception as e:
+        print(f"❌ Error al procesar los datos: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
