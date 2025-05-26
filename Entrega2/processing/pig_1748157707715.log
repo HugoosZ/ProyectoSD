@@ -1,0 +1,47 @@
+Pig Stack Trace
+---------------
+ERROR 1131: Could not find schema file for /processing/data_for_pig.json
+
+org.apache.pig.impl.logicalLayer.FrontendException: ERROR 1000: Error during parsing. Could not find schema file for /processing/data_for_pig.json
+	at org.apache.pig.PigServer$Graph.parseQuery(PigServer.java:1833)
+	at org.apache.pig.PigServer$Graph.access$000(PigServer.java:1528)
+	at org.apache.pig.PigServer.parseAndBuild(PigServer.java:461)
+	at org.apache.pig.PigServer.executeBatch(PigServer.java:486)
+	at org.apache.pig.PigServer.executeBatch(PigServer.java:472)
+	at org.apache.pig.tools.grunt.GruntParser.executeBatch(GruntParser.java:171)
+	at org.apache.pig.tools.grunt.GruntParser.parseStopOnError(GruntParser.java:234)
+	at org.apache.pig.tools.grunt.GruntParser.parseStopOnError(GruntParser.java:205)
+	at org.apache.pig.tools.grunt.Grunt.exec(Grunt.java:81)
+	at org.apache.pig.Main.run(Main.java:500)
+	at org.apache.pig.Main.main(Main.java:175)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.apache.hadoop.util.RunJar.run(RunJar.java:323)
+	at org.apache.hadoop.util.RunJar.main(RunJar.java:236)
+Caused by: Failed to parse: Can not retrieve schema from loader org.apache.pig.builtin.JsonLoader@3a2e9f5b
+	at org.apache.pig.parser.QueryParserDriver.parse(QueryParserDriver.java:201)
+	at org.apache.pig.PigServer$Graph.parseQuery(PigServer.java:1820)
+	... 16 more
+Caused by: java.lang.RuntimeException: Can not retrieve schema from loader org.apache.pig.builtin.JsonLoader@3a2e9f5b
+	at org.apache.pig.newplan.logical.relational.LOLoad.<init>(LOLoad.java:91)
+	at org.apache.pig.parser.LogicalPlanBuilder.buildLoadOp(LogicalPlanBuilder.java:914)
+	at org.apache.pig.parser.LogicalPlanGenerator.load_clause(LogicalPlanGenerator.java:3568)
+	at org.apache.pig.parser.LogicalPlanGenerator.op_clause(LogicalPlanGenerator.java:1625)
+	at org.apache.pig.parser.LogicalPlanGenerator.general_statement(LogicalPlanGenerator.java:1102)
+	at org.apache.pig.parser.LogicalPlanGenerator.statement(LogicalPlanGenerator.java:560)
+	at org.apache.pig.parser.LogicalPlanGenerator.query(LogicalPlanGenerator.java:421)
+	at org.apache.pig.parser.QueryParserDriver.parse(QueryParserDriver.java:191)
+	... 17 more
+Caused by: org.apache.pig.impl.logicalLayer.FrontendException: ERROR 2245: Cannot get schema from loadFunc org.apache.pig.builtin.JsonLoader
+	at org.apache.pig.newplan.logical.relational.LOLoad.getSchemaFromMetaData(LOLoad.java:179)
+	at org.apache.pig.newplan.logical.relational.LOLoad.<init>(LOLoad.java:89)
+	... 24 more
+Caused by: org.apache.pig.impl.logicalLayer.FrontendException: ERROR 1131: Could not find schema file for /processing/data_for_pig.json
+	at org.apache.pig.builtin.JsonMetadata.nullOrException(JsonMetadata.java:223)
+	at org.apache.pig.builtin.JsonMetadata.getSchema(JsonMetadata.java:201)
+	at org.apache.pig.builtin.JsonLoader.getSchema(JsonLoader.java:348)
+	at org.apache.pig.newplan.logical.relational.LOLoad.getSchemaFromMetaData(LOLoad.java:175)
+	... 25 more
+================================================================================
