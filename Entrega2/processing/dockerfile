@@ -1,47 +1,25 @@
-FROM python:3.9-slim
+# Imagen base compatible con ARM64 y x86_64
+FROM bde2020/hadoop-base:2.0.0-hadoop2.7.4-java8
 
-# 1. Instala dependencias básicas
+# Instalar dependencias necesarias
+USER root
 RUN apt-get update && \
-    apt-get install -y \
-    openjdk-17-jre-headless \
-    wget \
-    tar \
-    curl && \
-    apt-get clean && \
+    apt-get install -y wget unzip curl && \
     rm -rf /var/lib/apt/lists/*
 
-# 1.1 Configura JAVA_HOME para ARM64
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
-ENV PATH=$PATH:$JAVA_HOME/bin
-
-# 2. Instalar Hadoop
-RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-3.2.1/hadoop-3.2.1.tar.gz && \
-    tar -xzf hadoop-3.2.1.tar.gz && \
-    mv hadoop-3.2.1 /opt/hadoop && \
-    rm hadoop-3.2.1.tar.gz
-
-# 2.1 Configurar Hadoop
-ENV HADOOP_HOME=/opt/hadoop
-ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
-ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
-
-# 3. Instalar Pig
-RUN wget https://downloads.apache.org/pig/pig-0.17.0/pig-0.17.0.tar.gz && \
-    tar -xzf pig-0.17.0.tar.gz && \
-    mv pig-0.17.0 /opt/pig && \
-    rm pig-0.17.0.tar.gz
-
-# 3.1 Configurar entorno Pig
+# Instalar Apache Pig manualmente
+ENV PIG_VERSION=0.17.0
 ENV PIG_HOME=/opt/pig
-ENV PATH=$PATH:$PIG_HOME/bin    
+ENV PATH=$PATH:$PIG_HOME/bin
 
-# 4. Instala solo las dependencias necesarias
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN wget https://downloads.apache.org/pig/pig-${PIG_VERSION}/pig-${PIG_VERSION}.tar.gz && \
+    tar -xvzf pig-${PIG_VERSION}.tar.gz -C /opt && \
+    mv /opt/pig-${PIG_VERSION} $PIG_HOME && \
+    rm pig-${PIG_VERSION}.tar.gz
 
-# 5. Copia los archivos de procesamiento
-WORKDIR /app
-COPY ./src ./src
+# Copiar scripts Pig
+COPY ./src /scripts
 
-# 6. Comando de ejecución
-CMD ["python", "-u", "src/main.py"]
+WORKDIR /scripts
+
+CMD ["/bin/bash"]

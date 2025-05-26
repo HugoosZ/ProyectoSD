@@ -1,18 +1,29 @@
-import time
-import sys
+import json
+from datetime import datetime
+import os
+from dotenv import load_dotenv
+from pymongo import MongoClient
+load_dotenv(dotenv_path='mongo.env')
 
-sys.path.insert(0, "/storage/src")
-from mongo_storage import MongoStorage
+# Conectar a MongoDB
+mongo_uri = os.getenv("MONGO_URI")
+client = MongoClient(mongo_uri)
+db = client.traffic_db
+collection = db.raw_incidents
 
-mongo = MongoStorage()
-
-def main():
-    print("owo")
-    # a = mongo.obtener_todos_los_eventos()
+def clean_data():
+    # Eliminar registros incompletos y duplicados
+    collection.delete_many({"tipo": {"$exists": False}})
+    collection.delete_many({"ciudad": {"$regex": "\\u"}})  # Eliminar codificación incorrecta
     
-    while True:
-
-        time.sleep(120) # Espera de 2 minutos entre cada scrapeo
+    # Normalizar ciudades (ej: "Conchal\u00ed" -> "Conchalí")
+    pipeline = [
+        {"$addFields": {
+            "ciudad": {"$replaceOne": {"input": "$ciudad", "find": "\\u00ed", "replacement": "í"}}
+        }},
+        {"$out": "clean_incidents"}
+    ]
+    collection.aggregate(pipeline)
 
 if __name__ == "__main__":
-    main()
+    clean_data()

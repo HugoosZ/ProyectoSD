@@ -9,7 +9,7 @@ volumes:
   pig_data:
 
 services:
-mongo:
+  mongo:
     image: mongo:6
     container_name: waze-db
     ports:
@@ -20,7 +20,7 @@ mongo:
       - trafico-network
     restart: unless-stopped
 
-scraper:
+  scraper:
     build:
       context: ./scraper
       dockerfile: Dockerfile
@@ -36,7 +36,7 @@ scraper:
     depends_on:
       - mongo
 
-storage:
+  storage:
     build:
       context: ./storage
     container_name: waze-storage
@@ -50,19 +50,25 @@ storage:
       - mongo
     restart: no
 
-filter:
+  filter:
     build:
       context: ./filtering
     container_name: filtering
     depends_on:
       - mongo
+    networks:
+      - trafico-network
 
-pig:
-    image: suhothayan/hadoop-spark-pig-hive:2.9.2
+  pig:
+    build: 
+      context: ./processing
     container_name: pig
     ports:
       - "50070:50070"
       - "8088:8088"
     volumes:
-      - ./pig/scripts:/scripts
+      - ./processing/src:/scripts
       - pig_data:/data
+      - ./cleaned_data/data_for_pig.json:/data_for_pig.json
+    networks:
+      - trafico-network
