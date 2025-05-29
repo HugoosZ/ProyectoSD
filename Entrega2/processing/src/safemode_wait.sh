@@ -7,4 +7,4 @@ while hdfs dfsadmin -safemode get | grep -q "ON"; do
   sleep 5
 done
 
-echo "✅ NameNode fuera de Safe Mode. Continuando..."
+echo " NameNode fuera de Safe Mode. Continuando..."
