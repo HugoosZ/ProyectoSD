@@ -15,6 +15,12 @@ def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
             resultado = subprocess.run("hdfs dfsadmin -report", shell=True, capture_output=True, text=True)
             if resultado.returncode == 0:
                 print("✅ Conexión con Hadoop establecida correctamente")
+                safemode = subprocess.run(
+                                        ["/bin/bash", "src/safemode_wait.sh"],
+                                        check=True,
+                                        capture_output=True,
+                                        text=True)
+                                           
                 return True
             else:
                 print(f"❌ Intento {intento + 1}/{max_intentos} fallido:")
