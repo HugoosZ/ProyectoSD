@@ -28,8 +28,6 @@ services:
       - CLUSTER_NAME=test # Nombre del cluster (Probablemente no se use)
       - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000 #Define que se usará hdfs, donde ademas le dice a hadoop que el fs está en el namenode, escuchando al puerto 9000
       - CORE_CONF_hadoop_http_staticuser_user=root # Se define que la interfaz web de hadoop se ejecuta como el usuario root sin login
-      - CORE_CONF_hadoop_proxyuser_hue_hosts=* #Permite que un “usuario proxy” llamado hue (una interfaz web para Hadoop) se conecte desde cualquier host (*). (Problamente no se usa)
-      - CORE_CONF_hadoop_proxyuser_hue_groups=* #Igual que la anterior, pero permite que el usuario hue actúe en nombre de cualquier grupo (*). (Problamente no se usa)
       - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec # Configura los códecs de compresión que usará Hadoop.
       # Donde SnappyCodec es un códec de compresión rápido y eficiente de Google.
     ports:
@@ -47,12 +45,8 @@ services:
       - CLUSTER_NAME=test
       - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
       - CORE_CONF_hadoop_http_staticuser_user=root
-      - CORE_CONF_hadoop_proxyuser_hue_hosts=*
-      - CORE_CONF_hadoop_proxyuser_hue_groups=*
       - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
       # Todo igual que en namenode, donde gracias a las imagenes que estan diseñadas para generar automaticamente los archivos de configuracion
-      # Las variables de en el entorno se convierten en archivos de configuracion de hadoop, donde por ejemplo CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000 la imagen transforma esto en el archivo core-site.xml
-      # osea que podria borrar los archivos con/core-site.xml y hdfs-site.xml y seguiria funcionando, ya que las variables de entorno se convierten en archivos de configuracion de hadoop
     volumes:
       - ./hadoop-data/datanode:/hadoop/dfs/data #Donde se almacenan los datos fisicos
     depends_on:
