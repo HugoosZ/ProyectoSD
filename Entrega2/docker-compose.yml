@@ -1,12 +1,10 @@
-version: '3.8'
-
 networks:
   trafico-network:
     driver: bridge
 
 volumes:
   db-data:
-  pig_data:
+  processing-results:
 
 services:
   mongo:
@@ -15,7 +13,10 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - db-data:/data/db
+      - ./processing:/app
+      - ./hadoop-data:/hadoop-data
+      - ./processing/results:/processing
+
     networks:
       - trafico-network
     restart: unless-stopped
