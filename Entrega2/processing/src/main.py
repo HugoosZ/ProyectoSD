@@ -15,12 +15,6 @@ def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
             resultado = subprocess.run("hdfs dfsadmin -report", shell=True, capture_output=True, text=True)
             if resultado.returncode == 0:
                 print("✅ Conexión con Hadoop establecida correctamente")
-                safemode = subprocess.run(
-                                        ["/bin/bash", "src/safemode_wait.sh"],
-                                        check=True,
-                                        capture_output=True,
-                                        text=True)
-                                           
                 return True
             else:
                 print(f"❌ Intento {intento + 1}/{max_intentos} fallido:")
@@ -56,6 +50,7 @@ def procesar_con_pig(eventos):
         # Eliminar el archivo anterior si existe en HDFS
         subprocess.run("hdfs dfs -rm -f /processing/data_for_pig.json", shell=True)
         # Eliminar los directorios de salida si existen en HDFS
+        subprocess.run("hdfs dfs -rm -r -f /processing/cleaned_grouped_events", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/data_unique", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/event_counts", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/filtered_events", shell=True)
@@ -63,7 +58,24 @@ def procesar_con_pig(eventos):
         # Copiar el archivo JSON a HDFS
         subprocess.run("hdfs dfs -put /app/src/data_for_pig.json /processing/", shell=True, check=True)
         
-        # Ejecutar el script de Pig
+        # Ejecutar el script de filtrado y limpieza
+        print("\n🚦 Ejecutando filtrado y limpieza de datos con Pig...")
+        comando_filtrado = "pig -f /app/src/pig/clean_and_group.pig"
+        resultado_filtrado = subprocess.run(comando_filtrado, shell=True, capture_output=True, text=True)
+        if resultado_filtrado.returncode == 0:
+            print("✅ Filtrado y limpieza completados")
+            print(resultado_filtrado.stdout)
+            # Descargar resultados del filtrado
+            if not os.path.exists('/processing'):
+                os.makedirs('/processing')
+            subprocess.run("hdfs dfs -get /processing/cleaned_grouped_events /processing/", shell=True, check=True)
+            print("📁 Resultados del filtrado guardados en /processing/cleaned_grouped_events")
+        else:
+            print("❌ Error en el filtrado y limpieza con Pig:")
+            print(resultado_filtrado.stderr)
+            return False
+
+        # Ejecutar el script de Pig de procesamiento principal
         comando = "pig -f /app/src/pig/remove_duplicates.pig"
         resultado = subprocess.run(comando, shell=True, capture_output=True, text=True)
         
@@ -113,6 +125,20 @@ def exportar_datos_para_pig(eventos, archivo_salida='/processing/data_for_pig.js
         print(f"❌ Error al exportar datos: {str(e)}")
         return False
 
+def esperar_salida_safe_mode(intervalo=10, max_intentos=30):
+    """Espera hasta que Hadoop salga de safe mode antes de continuar."""
+    print("\n⏳ Esperando a que Hadoop salga de safe mode...")
+    for intento in range(max_intentos):
+        resultado = subprocess.run("hdfs dfsadmin -safemode get", shell=True, capture_output=True, text=True)
+        if "Safe mode is OFF" in resultado.stdout:
+            print("✅ Safe mode desactivado. Continuando con el procesamiento.")
+            return True
+        else:
+            print(f"⏳ Safe mode aún activo (intento {intento+1}/{max_intentos}). Esperando {intervalo} segundos...")
+            time.sleep(intervalo)
+    print("❌ Safe mode sigue activo después de varios intentos. Abortando procesamiento.")
+    return False
+
 def main():
     print("\n" + "="*50)
     print("  INICIO DE VERIFICACIÓN DEL SISTEMA")
@@ -121,6 +147,11 @@ def main():
     # Verificar Hadoop
     if not verificar_hadoop():
         print("❌ No se pudo establecer conexión con Hadoop. Saliendo...")
+        sys.exit(1)
+    
+    # Esperar a que safe mode esté desactivado
+    if not esperar_salida_safe_mode():
+        print("❌ Hadoop sigue en safe mode. Saliendo...")
         sys.exit(1)
     
     # Crear directorios en HDFS
