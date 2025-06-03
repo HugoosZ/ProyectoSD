@@ -51,10 +51,10 @@ def procesar_con_pig(eventos):
         subprocess.run("hdfs dfs -rm -f /processing/data_for_pig.json", shell=True)
         # Eliminar los directorios de salida si existen en HDFS
         subprocess.run("hdfs dfs -rm -r -f /processing/cleaned_grouped_events", shell=True)
-        subprocess.run("hdfs dfs -rm -r -f /processing/data_unique", shell=True)
+        """ subprocess.run("hdfs dfs -rm -r -f /processing/data_unique", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/event_counts", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/filtered_events", shell=True)
-        subprocess.run("hdfs dfs -rm -r -f /processing/sorted_events", shell=True)
+        subprocess.run("hdfs dfs -rm -r -f /processing/sorted_events", shell=True) """
         # Copiar el archivo JSON a HDFS
         subprocess.run("hdfs dfs -put /app/src/data_for_pig.json /processing/", shell=True, check=True)
         
