@@ -27,29 +27,29 @@ DISTRIBUCION = "exponencial"
 
 
 def generar_trafico():
-    stats = {"total": 0, "hits": 0}
+    """ stats = {"total": 0, "hits": 0}
 
     for i in range(TOTAL_CONSULTAS):
         if DISTRIBUCION == "uniforme":
-            evento = mongo.obtener_evento_uniforme()
-            intervalo = np.random.uniform(0.1, 1.0)
+            #evento = mongo.obtener_evento_uniforme()
+            #intervalo = np.random.uniform(0.1, 1.0)
 
         elif DISTRIBUCION == "exponencial":
-            evento = mongo.obtener_evento_exponencial(TOTAL_CONSULTAS)
-            intervalo = np.random.exponential(1.0)
+            #evento = mongo.obtener_evento_exponencial(TOTAL_CONSULTAS)
+            #intervalo = np.random.exponential(1.0)
 
         else:
             raise ValueError("Distribución no soportada")
 
-        if evento:
-            redis.enviar_evento_a_cache(evento,stats)
-        else:
+        #if evento:
+            #redis.enviar_evento_a_cache(evento,stats)
+        #else:
             print(f"❌ No se pudo obtener evento en consulta {i+1}")
             
     
-        time.sleep(intervalo)
+        time.sleep(intervalo) """
 
-    print(f"\n Estadísticas finales:")
+"""     print(f"\n Estadísticas finales:")
     print(f" Total de consultas: {stats['total']}")
     print(f" Hits (ya estaba en cache): {stats['hits']}")
     print(f" Inserts nuevos: {stats['total'] - stats['hits']}")    
@@ -57,3 +57,4 @@ def generar_trafico():
 if __name__ == "__main__":
     print(f"Iniciando generador de tráfico usando distribución: {DISTRIBUCION}")
     generar_trafico()
+ """
