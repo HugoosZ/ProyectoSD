@@ -20,7 +20,7 @@ def obtener_eventos():
     eventos = []  # Lista donde vamos a guardar solo eventos nuevos o actualizados
     response = requests.get(URL, params=PARAMS)
     if response.status_code != 200:
-        print("❌ Error al obtener datos:", response.status_code)
+        print(" Error al obtener datos:", response.status_code)
         return eventos
 
     data = response.json()
@@ -44,19 +44,19 @@ def obtener_eventos():
         if clave not in eventos_unicos or eventos_unicos[clave]["hora"] != hora:
             eventos_unicos[clave] = nuevo_evento
             eventos.append(nuevo_evento)  # Solo nuevos eventos nuevos o actualizados
-            print("🆕 Evento nuevo o actualizado:", nuevo_evento)
+            print(" Evento nuevo o actualizado:", nuevo_evento)
 
     return eventos
 
 # Ejemplo de uso: hacer consulta cada 1 minuto
 if __name__ == "__main__":
     while True:
-        print(f"\n⏱️ Consultando eventos... {datetime.now().isoformat()}")
+        print(f"\nConsultando eventos... {datetime.now().isoformat()}")
         nuevos_eventos = obtener_eventos()
 
         if nuevos_eventos:
-            print(f"✅ Se encontraron {len(nuevos_eventos)} evento(s) nuevo(s) o actualizado(s).")
+            print(f"Se encontraron {len(nuevos_eventos)} evento(s) nuevo(s) o actualizado(s).")
         else:
-            print("⏸️ Sin cambios en los eventos.")
+            print("Sin cambios en los eventos.")
 
         time.sleep(60)  # Esperar 1 minuto
