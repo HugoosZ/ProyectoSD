@@ -11,7 +11,7 @@ import shutil
 # Intenta varias veces por si tarda en levantar
 
 def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
-    print("\nVerificando conexión con Hadoop...")
+    print("\nVerificando conexión con Hadoop")
     for intento in range(max_intentos):
         try:
             resultado = subprocess.run("hdfs dfsadmin -report", shell=True, capture_output=True, text=True)
@@ -22,12 +22,12 @@ def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
                 print(f"Intento {intento + 1}/{max_intentos} fallido:")
                 print(resultado.stderr)
                 if intento < max_intentos - 1:
-                    print(f"Esperando {espera_entre_intentos} segundos antes del siguiente intento...")
+                    print(f"Esperando {espera_entre_intentos} segundos antes del siguiente intento")
                     time.sleep(espera_entre_intentos)
         except Exception as e:
             print(f"Intento {intento + 1}/{max_intentos} fallido: {str(e)}")
             if intento < max_intentos - 1:
-                print(f"Esperando {espera_entre_intentos} segundos antes del siguiente intento...")
+                print(f"Esperando {espera_entre_intentos} segundos antes del siguiente intento")
                 time.sleep(espera_entre_intentos)
     print("No se pudo establecer conexión con Hadoop después de varios intentos")
     return False
@@ -35,7 +35,7 @@ def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
 # Crea la carpeta principal en HDFS donde se guardan los datos procesados
 
 def crear_directorios_hdfs():
-    print("\nCreando directorios en HDFS...")
+    print("\nCreando directorios en HDFS")
     try:
         subprocess.run("hdfs dfs -mkdir -p /processing", shell=True, check=True)
         print("Directorios creados correctamente")
@@ -48,7 +48,7 @@ def crear_directorios_hdfs():
 # También descarga los resultados a la carpeta local
 
 def procesar_con_pig():
-    print("\nProcesando datos con Apache Pig...")
+    print("\nProcesando datos con Apache Pig")
     try:
         # Limpia los datos viejos en HDFS
         subprocess.run("hdfs dfs -rm -f /processing/data_for_pig.csv", shell=True)
@@ -64,27 +64,27 @@ def procesar_con_pig():
         # Sube el CSV a HDFS
         subprocess.run("hdfs dfs -put /app/src/data_for_pig.csv /processing/", shell=True, check=True)
         # Filtra los datos 
-        print("\nEjecutando filtrado de datos con Pig...")
+        print("\nEjecutando filtrado de datos con Pig")
         comando_filtrado = "pig -f /app/src/pig/filtering.pig"
         resultado_filtrado = subprocess.run(comando_filtrado, shell=True, capture_output=True, text=True)
         if resultado_filtrado.returncode != 0:
-            print("Error en el filtrado con Pig:")
+            print("Error en el filtrado con Pig")
             print(resultado_filtrado.stderr)
             return False
+        print("\nEjecutando agrupación y deduplicación de datos con Pig")
         # Agrupa y elimina duplicados
-        print("\nEjecutando agrupación y deduplicación de datos con Pig...")
         comando_processing = "pig -f /app/src/pig/processing.pig"
         resultado_processing = subprocess.run(comando_processing, shell=True, capture_output=True, text=True)
         if resultado_processing.returncode != 0:
-            print("Error en el procesamiento con Pig:")
+            print("Error en el procesamiento con Pig")
             print(resultado_processing.stderr)
             return False
+        print("\nEjecutando análisis exploratorio con Pig")
         # Hace análisis exploratorio
-        print("\nEjecutando análisis exploratorio con Pig...")
         comando_analisis = "pig -f /app/src/pig/data_analisis.pig"
         resultado_analisis = subprocess.run(comando_analisis, shell=True, capture_output=True, text=True)
         if resultado_analisis.returncode != 0:
-            print("Error en el análisis exploratorio con Pig:")
+            print("Error en el análisis exploratorio con Pig")
             print(resultado_analisis.stderr)
             return False
         # Descarga los resultados a la carpeta local
@@ -101,7 +101,7 @@ def procesar_con_pig():
         ]:
             local_results_path = results_dir.replace('/processing', '/processing')
             if os.path.exists(local_results_path):
-                print(f"Carpeta {local_results_path} ya existe. Eliminando para evitar conflictos...")
+                print(f"Carpeta {local_results_path} ya existe. Eliminando para evitar conflictos")
                 shutil.rmtree(local_results_path)
             subprocess.run(f"hdfs dfs -get {results_dir} /processing/", shell=True, check=True)
             print(f"Resultados guardados en {local_results_path}")
@@ -114,7 +114,7 @@ def procesar_con_pig():
 # Exporta los datos a un CSV para que Pig los pueda leer
 
 def exportar_datos_para_pig(eventos, archivo_salida='/processing/data_for_pig.csv'):
-    print("\nExportando datos para Pig (CSV)...")
+    print("\nExportando datos para Pig (CSV)")
     try:
         if not eventos:
             print("No hay eventos para exportar")
@@ -136,16 +136,16 @@ def exportar_datos_para_pig(eventos, archivo_salida='/processing/data_for_pig.cs
 # Espera a que Hadoop salga de safe mode antes de seguir
 
 def esperar_salida_safe_mode(intervalo=10, max_intentos=30):
-    print("\nEsperando a que Hadoop salga de safe mode...")
+    print("\nEsperando a que Hadoop salga de safe mode")
     for intento in range(max_intentos):
         resultado = subprocess.run("hdfs dfsadmin -safemode get", shell=True, capture_output=True, text=True)
         if "Safe mode is OFF" in resultado.stdout:
-            print("Safe mode desactivado. Continuando con el procesamiento.")
+            print("Safe mode desactivado. Continuando con el procesamiento")
             return True
         else:
             print(f"Safe mode aún activo (intento {intento+1}/{max_intentos}). Esperando {intervalo} segundos...")
             time.sleep(intervalo)
-    print("Safe mode sigue activo después de varios intentos. Abortando procesamiento.")
+    print("Safe mode sigue activo después de varios intentos. Abortando procesamiento")
     return False
 
 # Orquesta todo el procesamiento
@@ -156,18 +156,18 @@ def main():
     print("="*50)
     # Primero revisa que Hadoop esté listo
     if not verificar_hadoop():
-        print("No se pudo establecer conexión con Hadoop. Saliendo...")
+        print("No se pudo establecer conexión con Hadoop. Saliendo")
         sys.exit(1)
     # Espera a que Hadoop salga de safe mode
     if not esperar_salida_safe_mode():
-        print("Hadoop sigue en safe mode. Saliendo...")
+        print("Hadoop sigue en safe mode. Saliendo")
         sys.exit(1)
     # Crea los directorios necesarios en HDFS
     if not crear_directorios_hdfs():
-        print("No se pudieron crear los directorios en HDFS. Saliendo...")
+        print("No se pudieron crear los directorios en HDFS. Saliendo")
         sys.exit(1)
     # Procesa los datos con Pig
-    print("\nIniciando procesamiento de datos...")
+    print("\nIniciando procesamiento de datos")
     if procesar_con_pig():
         print("Procesamiento completado exitosamente")
     else:
