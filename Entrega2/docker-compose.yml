@@ -7,16 +7,7 @@ volumes:
   processing-results:
 
 services:
-  mongo:
-    image: mongo:6
-    container_name: waze-db
-    ports:
-      - "27017:27017"
-    volumes:
-      - db-data:/data/db
-    networks:
-      - trafico-network
-    restart: unless-stopped
+
 
   scraper:
     build:
@@ -32,7 +23,7 @@ services:
     env_file:
       - mongo.env
     depends_on:
-      - mongo
+      - storage
 
 
   storage:
@@ -45,8 +36,7 @@ services:
       - mongo.env
     networks:
       - trafico-network
-    depends_on:
-      - mongo
+
     restart: no
 
 
@@ -63,7 +53,6 @@ services:
     env_file:
       - mongo.env
     depends_on:
-      - mongo
       - storage
       - hadoop-namenode
       - hadoop-datanode
