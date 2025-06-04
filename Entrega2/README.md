@@ -1,57 +1,44 @@
-# ProyectoSD
+# ProyectoSD - Entrega 2 
 
-## Instrucciones para ejecutar el proyecto!!!!!!
+## Descripción
 
-### 1. Configurar el generador de tráfico
+Este proyecto implementa un sistema distribuido que utiliza Apache Pig y Hadoop para el procesamiento de datos, junto con un servicio de almacenamiento (mongo). Los servicios se orquestan mediante Docker Compose.
 
-Abre el archivo:
+## Requisitos previos
 
-- `traffic-generator/src/main.py`
+- Arquitectura ARM64 (la imagen de Java utilizada es específica para ARM64; si tu equipo no cuenta con esta arquitectura, el código no funcionará).
 
-Dentro de este archivo puedes:
+## Inicialización del sistema
 
-- Configurar cuántas consultas se desean realizar.
-- Elegir el tipo de distribución a utilizar: uniforme o exponencial.
+Al iniciar los contenedores, el sistema se lanza de forma secuencial utilizando las dependencias definidas en `docker-compose.yml`:
 
-### 2. Crear archivos de entorno
+1. Se inicia primero el servicio de MongoDB.
+2. Posteriormente, se levantan los demás componentes.
+3. El contenedor `waze-processing` realiza intentos de conexión hasta que el `namenode` de Hadoop sale del modo seguro. Una vez disponible, se conecta y ejecuta los comandos de Pig definidos en `processing/src/main.py`.
 
-Antes de ejecutar el proyecto, debes crear dos archivos de configuración:
+## Ejecución del proyecto
 
-- `mongo.env`
-- `redis.env`
+Para construir y levantar todos los servicios en contenedores Docker, ejecuta el siguiente comando desde la carpeta `Entrega2/`:
 
-Ambos deben seguir el formato definido en `example.env`:
+```sh
+docker compose up --build
+```
 
-- Las variables relacionadas con MongoDB deben ir en `mongo.env`.
-- Las variables relacionadas con Redis deben ir en `redis.env`.
+Este comando compilará y lanzará los servicios definidos en el archivo `docker-compose.yml`.
 
-### 3. Configurar Redis
+## Notas adicionales
 
-En el archivo `redis.env`, debes asignar el valor de la variable `REDIS_HOST` siguiendo este formato: 
+- Si necesitas modificar la configuración de Hadoop o Pig, revisa los archivos en `processing/hadoop-conf/` y `processing/src/pig/`.
+- Los resultados del procesamiento se almacenan en la carpeta `processing/results/`.
+- Si tienes problemas con Hadoop, prueba borrando el contenido de la carpeta `/hadoop-data/`.
+- Para detener los servicios, puedes usar:
 
-- `tipoDistribucion_políticaRemoción`
+```sh
+docker compose down
+```
 
-Por ejemplo:
-
-``env
-REDIS_HOST=uniform-lru
+---
 
 
-### 4. Modificar el parámetro beta (solo si usas distribución exponencial)
 
-Si se quiere utilizar la distribución exponencial y deseas cambiar el factor de proporcion β (beta), edita el archivo:
-
-- storage/src/mongo_storage.py
-
-donde: 
-
-- Un valor de beta más bajo generará eventos con mayor frecuencia cerca de 0.
-- Un valor de beta más alto dispersará más los accesos entre eventos.
-
-### 5. Ejecutar el proyecto
-
-Finalmente, ejecuta el siguiente comando para construir y levantar todos los servicios en contenedores Docker:
-
-- `docker compose up --build`
-
-Este comando compilará y lanzará los servicios definidos en el archivo docker-compose.yml.
+Si tienes dudas o problemas, revisa los logs de los contenedores para obtener más información sobre posibles errores.

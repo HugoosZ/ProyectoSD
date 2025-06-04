@@ -60,7 +60,7 @@ def procesar_con_pig():
         # Limpia los datos viejos en HDFS
         subprocess.run("hdfs dfs -rm -f /processing/data_for_pig.csv", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/filtered_events", shell=True)
-        subprocess.run("hdfs dfs -rm -r -f /processing/data_unique", shell=True)
+        subprocess.run("hdfs dfs -rm -r -f /processing/group_data", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/event_counts", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/incidentes_por_comuna", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/incidentes_ciudad_tipo", shell=True)
