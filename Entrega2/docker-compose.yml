@@ -21,6 +21,7 @@ services:
     networks:
       - trafico-network
 
+      
   hadoop-namenode: # Nodo maestro encargado de almacenar las metadata, de la biblioteca(datanode) es como el catologo que sabe todo lo que hay en la biblioteca
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: hadoop-namenode

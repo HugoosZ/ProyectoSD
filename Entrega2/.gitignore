@@ -11,3 +11,7 @@ __pycache__/
 
 dump.rdb
 *.log
+
+processing/results/
+processing/hadoop-config/
+hadoop-data/
