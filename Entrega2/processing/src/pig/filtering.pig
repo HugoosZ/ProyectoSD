@@ -22,5 +22,5 @@ standardized_events = FOREACH filtered_events GENERATE
     lat,
     lon;
 
--- Guardar datos filtrados
+-- Guardar datos filtrados 
 STORE standardized_events INTO '/processing/filtered_events' USING PigStorage(',');
