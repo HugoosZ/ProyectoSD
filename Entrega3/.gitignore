@@ -1,0 +1,15 @@
+# Archivos de entorno
+mongo.env
+redis.env
+.env
+
+# Archivos de sistema (macOS)
+.DS_Store
+
+# Pycache
+__pycache__/
+*.py[cod]*.pyc
+
+dump.rdb
+
+hadoop-data/

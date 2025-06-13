@@ -1,0 +1,99 @@
+networks:
+  trafico-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  processing-results:
+
+services:
+
+
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: waze-scraper
+    volumes:
+      - ./scraper/src:/app/src
+      - ./storage:/storage
+    networks:
+      - trafico-network
+    restart: unless-stopped
+    env_file:
+      - mongo.env
+    depends_on:
+      - storage
+
+
+  storage:
+    build:
+      context: ./storage
+    container_name: waze-storage
+    volumes:
+      - ./storage:/storage
+    env_file:
+      - mongo.env
+    networks:
+      - trafico-network
+
+    restart: no
+
+
+    
+  waze-processing:
+    build: ./processing
+    container_name: waze-processing
+    volumes: #local:docker
+      - ./processing:/app  #lo de processing se monta en /app
+      - ./hadoop-data:/hadoop-data #Lo de hadoop-data (datanode, namenode) se monta en /hadoop-data
+      - ./processing/results:/processing # processing results se monta en /processing (no existe results, entonces acá se guarden los resultados del contenedor)
+      - ./storage:/storage
+      
+    env_file:
+      - mongo.env
+    depends_on:
+      - storage
+      - hadoop-namenode
+      - hadoop-datanode
+    networks:
+      - trafico-network
+
+      
+  hadoop-namenode: # Nodo maestro encargado de almacenar las metadata, de la biblioteca(datanode) es como el catologo que sabe todo lo que hay en la biblioteca
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: hadoop-namenode
+    environment:
+      - CLUSTER_NAME=test # Nombre del cluster (Probablemente no se use)
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000 #Define que se usará hdfs, donde ademas le dice a hadoop que el fs está en el namenode, escuchando al puerto 9000
+      - CORE_CONF_hadoop_http_staticuser_user=root # Se define que la interfaz web de hadoop se ejecuta como el usuario root sin login
+      - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec # Configura los códecs de compresión que usará Hadoop.
+      # Donde SnappyCodec es un códec de compresión rápido y eficiente de Google.
+    ports:
+      - "50070:50070" #Interfaz web de namenode
+      - "9000:9000" # Comunicacion HDFS 
+    volumes:
+      - ./hadoop-data/namenode:/hadoop/dfs/name # Catalogo de la biblioteca
+    networks:
+      - trafico-network
+
+  hadoop-datanode: #Los nodos esclavos encargados de almacenar fisicamente los datos (128mb por defecto) que se reparten en n datanodes
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hadoop-datanode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop-namenode:9000
+      - CORE_CONF_hadoop_http_staticuser_user=root
+      - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
+      # Todo igual que en namenode, donde gracias a las imagenes que estan diseñadas para generar automaticamente los archivos de configuracion
+    volumes:
+      - ./hadoop-data/datanode:/hadoop/dfs/data #Donde se almacenan los datos fisicos
+    depends_on:
+      - hadoop-namenode # Espera a que el nodo maestro este listo
+    networks:
+      - trafico-network
+
+    #Flujo de lanzamiento de hadoop:
+    # 1. Arranca el namenode y se conecta al puerto 9000
+    # 2. Arranca el datanode y se conecta al namenode y empieza a reportar salud y disponibilidad de bloques.
+    # 3. Arranca waze-processing y se conecta mediante el puerto 9000 al namenode y de acá se ejecutan los comandos
