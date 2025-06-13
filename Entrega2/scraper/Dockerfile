@@ -16,4 +16,4 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Ejecutar script principal
-CMD ["python", "-u", "src/main.py"]
+CMD ["python", "-u", "main.py"]

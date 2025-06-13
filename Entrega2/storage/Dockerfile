@@ -2,7 +2,7 @@
 FROM python:3.9-slim
 
 # Directorio de trabajo en el contenedor
-WORKDIR /app
+WORKDIR /app/storage
 
 # Copiar los requerimientos e instalar dependencias
 COPY requirements.txt .
@@ -12,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ .
 
 # Comando que se ejecutará al levantar el contenedor
-CMD ["python", "/storage/src/mongo_storage.py"]
+CMD ["python", "mongo_storage.py"]
