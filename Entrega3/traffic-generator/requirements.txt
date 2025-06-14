@@ -1,0 +1,4 @@
+pymongo
+python-dotenv
+numpy
+redis

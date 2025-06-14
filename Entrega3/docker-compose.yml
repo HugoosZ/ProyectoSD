@@ -6,6 +6,7 @@ volumes:
   db-data:
   processing-results:
   esdata:
+  redis-exp-lfu-data:
 
 services:
   scraper:
@@ -132,6 +133,7 @@ services:
     volumes:
       - ./elastic/src:/app/elastic
       # - ./storage/src:/app/storage
+      - 
     networks:
       - trafico-network
     #restart: unless-stopped
@@ -140,3 +142,38 @@ services:
     depends_on:
       - elasticsearch
       - kibana
+
+
+
+
+  cache-service:
+    build:
+      context: ./cache-service
+    container_name: waze-cache-service
+    volumes:
+      - ./cache-service/src:/app/cache-service
+    env_file: redis.env
+    networks:
+      - trafico-network
+    depends_on:
+      - redis-exp-lfu
+    restart: unless-stopped
+
+  traffic-generator:
+    build:
+      context: ./traffic-generator
+      dockerfile: Dockerfile
+    container_name: waze-traffic-gen
+    volumes:
+      - ./traffic-generator/src:/app/traffic-generator
+      - ./storage/src:/app/storage
+      - ./cache-service/src:/app/cache-service
+    networks:
+      - trafico-network
+    env_file:
+      - mongo.env
+      - redis.env
+    depends_on:
+      - storage
+      - redis-exp-lfu
+    restart: no
