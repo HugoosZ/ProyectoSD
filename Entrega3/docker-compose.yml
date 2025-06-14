@@ -5,6 +5,7 @@ networks:
 volumes:
   db-data:
   processing-results:
+  esdata:
 
 services:
   scraper:
@@ -95,3 +96,47 @@ services:
     # 1. Arranca el namenode y se conecta al puerto 9000
     # 2. Arranca el datanode y se conecta al namenode y empieza a reportar salud y disponibilidad de bloques.
     # 3. Arranca waze-processing y se conecta mediante el puerto 9000 al namenode y de acá se ejecutan los comandos
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - trafico-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - trafico-network
+
+
+  elastic:
+    build:
+      context: ./elastic
+      dockerfile: Dockerfile
+    container_name: waze-elastic
+    volumes:
+      - ./elastic/src:/app/elastic
+      # - ./storage/src:/app/storage
+    networks:
+      - trafico-network
+    #restart: unless-stopped
+    #env_file:
+    #  - mongo.env
+    depends_on:
+      - elasticsearch
+      - kibana

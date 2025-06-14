@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /app/elastic
+
+COPY ./src/ /app/elastic/
+
+# Instala las dependencias necesarias
+COPY requirements.txt .
+RUN apt-get update && apt-get install -y curl iputils-ping && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Si tienes un script principal, por ejemplo main.py:
+CMD ["python", "main.py"]
