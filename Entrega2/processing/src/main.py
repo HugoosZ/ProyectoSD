@@ -7,9 +7,6 @@ import os
 import csv
 import shutil
 
-import time
-import sys
-
 sys.path.insert(0, "/app/storage")
 from mongo_storage import MongoStorage
 
@@ -69,10 +66,10 @@ def procesar_con_pig():
         subprocess.run("hdfs dfs -rm -r -f /processing/distribucion_horaria", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/picos_por_hora_tipo", shell=True)
         # Sube el CSV a HDFS
-        subprocess.run("hdfs dfs -put /app/src/data_for_pig.csv /processing/", shell=True, check=True)
+        subprocess.run("hdfs dfs -put /app/processing/src/data_for_pig.csv /processing/", shell=True, check=True)
         # Filtra los datos 
         print("\nEjecutando filtrado de datos con Pig")
-        comando_filtrado = "pig -f /app/src/pig/filtering.pig"
+        comando_filtrado = "pig -f /app/processing/src/pig/filtering.pig"
         resultado_filtrado = subprocess.run(comando_filtrado, shell=True, capture_output=True, text=True)
         if resultado_filtrado.returncode != 0:
             print("Error en el filtrado con Pig")
@@ -80,7 +77,7 @@ def procesar_con_pig():
             return False
         print("\nEjecutando agrupación y deduplicación de datos con Pig")
         # Agrupa y elimina duplicados
-        comando_processing = "pig -f /app/src/pig/group.pig"
+        comando_processing = "pig -f /app/processing/src/pig/group.pig"
         resultado_processing = subprocess.run(comando_processing, shell=True, capture_output=True, text=True)
         if resultado_processing.returncode != 0:
             print("Error en el procesamiento con Pig")
@@ -88,7 +85,7 @@ def procesar_con_pig():
             return False
         print("\nEjecutando análisis exploratorio con Pig")
         # Hace análisis exploratorio
-        comando_analisis = "pig -f /app/src/pig/processing.pig"
+        comando_analisis = "pig -f /app/processing/src/pig/processing.pig"
         resultado_analisis = subprocess.run(comando_analisis, shell=True, capture_output=True, text=True)
         if resultado_analisis.returncode != 0:
             print("Error en el análisis exploratorio con Pig")
@@ -106,11 +103,11 @@ def procesar_con_pig():
             '/processing/distribucion_horaria',
             '/processing/picos_por_hora_tipo'
         ]:
-            local_results_path = results_dir.replace('/processing', '/processing')
+            local_results_path = results_dir.replace('/processing', '/app/processing/results')
             if os.path.exists(local_results_path):
                 print(f"Carpeta {local_results_path} ya existe. Eliminando para evitar conflictos")
                 shutil.rmtree(local_results_path)
-            subprocess.run(f"hdfs dfs -get {results_dir} /processing/", shell=True, check=True)
+            subprocess.run(f"hdfs dfs -get {results_dir} /app/processing/results/", shell=True, check=True)
             print(f"Resultados guardados en {local_results_path}")
         print("Procesamiento completado exitosamente")
         return True
@@ -120,7 +117,7 @@ def procesar_con_pig():
 
 # Exporta los datos a un CSV para que Pig los pueda leer
 
-def exportar_datos_para_pig(eventos, archivo_salida='/processing/data_for_pig.csv'):
+def exportar_datos_para_pig(eventos, archivo_salida='/app/processing/src/data_for_pig.csv'):
     print("\nExportando datos para Pig (CSV)")
     try:
         if not eventos:
@@ -158,9 +155,8 @@ def esperar_salida_safe_mode(intervalo=10, max_intentos=30):
 # Orquesta todo el procesamiento
 
 def main():
-    
     storage = MongoStorage()
-    ruta_csv = os.path.join(os.path.dirname(__file__), 'data_for_pig.csv')
+    ruta_csv = os.path.join('/app/processing/src', 'data_for_pig.csv')
     storage.obtener_todos_los_eventos(ruta_csv=ruta_csv)
     print("\n" + "="*50)
     print("  INICIO DE VERIFICACIÓN DEL SISTEMA")
