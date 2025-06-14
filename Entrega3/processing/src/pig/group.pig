@@ -24,5 +24,5 @@ data_unique = FOREACH grouped_events {
     GENERATE FLATTEN(first.(tipo, subtipo, ubicacion, ciudad, hora, lat, lon));
 };
 
--- Guardar resultado
+-- Guardar resultado 
 STORE data_unique INTO '/processing/data_unique' USING PigStorage(',');

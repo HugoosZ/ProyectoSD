@@ -45,7 +45,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. Copia los archivos de procesamiento
-WORKDIR /app
+WORKDIR /app/processing
 COPY ./src ./src
 
 # 7. Comando de ejecución

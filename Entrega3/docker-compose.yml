@@ -7,16 +7,14 @@ volumes:
   processing-results:
 
 services:
-
-
   scraper:
     build:
       context: ./scraper
       dockerfile: Dockerfile
     container_name: waze-scraper
     volumes:
-      - ./scraper/src:/app/src
-      - ./storage:/storage
+      - ./scraper/src:/app/scraper
+      - ./storage/src:/app/storage
     networks:
       - trafico-network
     restart: unless-stopped
@@ -31,7 +29,7 @@ services:
       context: ./storage
     container_name: waze-storage
     volumes:
-      - ./storage:/storage
+      - ./storage/src:/app/storage
     env_file:
       - mongo.env
     networks:
@@ -45,10 +43,10 @@ services:
     build: ./processing
     container_name: waze-processing
     volumes: #local:docker
-      - ./processing:/app  #lo de processing se monta en /app
-      - ./hadoop-data:/hadoop-data #Lo de hadoop-data (datanode, namenode) se monta en /hadoop-data
-      - ./processing/results:/processing # processing results se monta en /processing (no existe results, entonces acá se guarden los resultados del contenedor)
-      - ./storage:/storage
+      - ./processing:/app/processing  #lo de processing se monta en /app
+      - ./hadoop-data:/app/hadoop-data #Lo de hadoop-data (datanode, namenode) se monta en /hadoop-data
+      - ./processing/results:/app/processing/results # processing results se monta en /processing/results (no existe results, entonces acá se guarden los resultados del contenedor)
+      - ./storage/src:/app/storage
       
     env_file:
       - mongo.env
@@ -73,7 +71,7 @@ services:
       - "50070:50070" #Interfaz web de namenode
       - "9000:9000" # Comunicacion HDFS 
     volumes:
-      - ./hadoop-data/namenode:/hadoop/dfs/name # Catalogo de la biblioteca
+      - ./hadoop-data/namenode:/app/hadoop/dfs/name # Catalogo de la biblioteca
     networks:
       - trafico-network
 
@@ -87,7 +85,7 @@ services:
       - CORE_CONF_io_compression_codecs=org.apache.hadoop.io.compress.SnappyCodec
       # Todo igual que en namenode, donde gracias a las imagenes que estan diseñadas para generar automaticamente los archivos de configuracion
     volumes:
-      - ./hadoop-data/datanode:/hadoop/dfs/data #Donde se almacenan los datos fisicos
+      - ./hadoop-data/datanode:/app/hadoop/dfs/data #Donde se almacenan los datos fisicos
     depends_on:
       - hadoop-namenode # Espera a que el nodo maestro este listo
     networks:

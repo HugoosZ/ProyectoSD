@@ -25,7 +25,7 @@ count_by_tipo = FOREACH group_by_tipo GENERATE
     COUNT(data) AS total;
 STORE count_by_tipo INTO '/processing/event_counts' USING PigStorage(',');
 
--- Análisis temporal por día
+-- Análisis temporal por día 
 data_con_fecha = FOREACH data GENERATE
     tipo,
     subtipo,
