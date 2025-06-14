@@ -3,7 +3,7 @@ from waze_scraper import obtener_eventos
 import sys
 import os
 
-sys.path.insert(0, "/storage/src")
+sys.path.insert(0, "/app/storage")
 from mongo_storage import MongoStorage
 
 

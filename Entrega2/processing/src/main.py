@@ -10,7 +10,7 @@ import shutil
 import time
 import sys
 
-sys.path.insert(0, "/storage/src")
+sys.path.insert(0, "/app/storage")
 from mongo_storage import MongoStorage
 
 
