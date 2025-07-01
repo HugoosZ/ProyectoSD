@@ -13,3 +13,17 @@ __pycache__/
 dump.rdb
 
 hadoop-data/
+
+# Archivos de datos temporales del sistema de consultas
+*.csv
+pig_*.log
+shared-data/
+
+# Logs del sistema
+*.log
+
+# Archivos temporales de IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -5,6 +5,7 @@ networks:
 volumes:
   db-data:
   processing-results:
+  processing-data:  # Nuevo volumen compartido
   esdata:
   redis-exp-lfu-data:
 
@@ -47,8 +48,9 @@ services:
     volumes: #local:docker
       - ./processing:/app/processing  #lo de processing se monta en /app
       - ./hadoop-data:/app/hadoop-data #Lo de hadoop-data (datanode, namenode) se monta en /hadoop-data
-      - ./processing/results:/app/processing/results # processing results se monta en /processing/results (no existe results, entonces acá se guarden los resultados del contenedor)
+      - ./processing/results:/app/processing/results # processing results se monta en /processing/results (no existe results, entonces acá se gueden los resultados del contenedor)
       - ./storage/src:/app/storage
+      - ./shared-data:/app/shared-data  # Directorio local compartido con elastic
       
     env_file:
       - mongo.env
@@ -128,28 +130,42 @@ services:
   elastic:
     build:
       context: ./elastic
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     container_name: waze-elastic
     volumes:
       - ./elastic/src:/app/elastic
-      # - ./storage/src:/app/storage
-      - 
+      - ./processing:/app/processing
+      - ./storage/src:/app/storage
+      - ./shared-data:/app/shared-data  # Mismo directorio local compartido
+      - /var/run/docker.sock:/var/run/docker.sock  # Socket de Docker para verificar contenedores
     networks:
       - trafico-network
-    #restart: unless-stopped
-    #env_file:
-    #  - mongo.env
+    restart: unless-stopped
+    env_file:
+      - mongo.env
     depends_on:
       - elasticsearch
       - kibana
 
 
-
+  redis-exp-lfu:
+    image: redis:7-alpine
+    container_name: redis-exp-lfu
+    ports:
+      - "6383:6379"
+    volumes:
+      - redis-exp-lfu-data:/data
+    command: redis-server --maxmemory 3mb --maxmemory-policy allkeys-lfu
+    networks:
+      - trafico-network
+    restart: unless-stopped
 
   cache-service:
     build:
       context: ./cache-service
     container_name: waze-cache-service
+    ports:
+      - "8000:8000"
     volumes:
       - ./cache-service/src:/app/cache-service
     env_file: redis.env
@@ -158,22 +174,3 @@ services:
     depends_on:
       - redis-exp-lfu
     restart: unless-stopped
-
-  traffic-generator:
-    build:
-      context: ./traffic-generator
-      dockerfile: Dockerfile
-    container_name: waze-traffic-gen
-    volumes:
-      - ./traffic-generator/src:/app/traffic-generator
-      - ./storage/src:/app/storage
-      - ./cache-service/src:/app/cache-service
-    networks:
-      - trafico-network
-    env_file:
-      - mongo.env
-      - redis.env
-    depends_on:
-      - storage
-      - redis-exp-lfu
-    restart: no

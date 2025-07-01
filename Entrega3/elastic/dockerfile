@@ -4,9 +4,11 @@ WORKDIR /app/elastic
 
 COPY ./src/ /app/elastic/
 
-# Instala las dependencias necesarias
+# Instala las dependencias necesarias incluyendo Docker CLI
 COPY requirements.txt .
 RUN apt-get update && apt-get install -y curl iputils-ping && \
+    curl -fsSL https://get.docker.com -o get-docker.sh && \
+    sh get-docker.sh && \
     pip install --no-cache-dir -r requirements.txt
 
 # Si tienes un script principal, por ejemplo main.py:
