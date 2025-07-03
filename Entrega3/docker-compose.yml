@@ -164,8 +164,6 @@ services:
     build:
       context: ./cache-service
     container_name: waze-cache-service
-    ports:
-      - "8000:8000"
     volumes:
       - ./cache-service/src:/app/cache-service
     env_file: redis.env

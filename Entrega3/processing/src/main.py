@@ -57,6 +57,7 @@ def procesar_con_pig():
         # Limpia los datos viejos en HDFS
         subprocess.run("hdfs dfs -rm -f /processing/data_for_pig.csv", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/filtered_events", shell=True)
+        subprocess.run("hdfs dfs -rm -r -f /processing/data_unique", shell=True)  
         subprocess.run("hdfs dfs -rm -r -f /processing/group_data", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/event_counts", shell=True)
         subprocess.run("hdfs dfs -rm -r -f /processing/incidentes_por_comuna", shell=True)
@@ -152,6 +153,64 @@ def esperar_salida_safe_mode(intervalo=10, max_intentos=30):
     print("Safe mode sigue activo después de varios intentos. Abortando procesamiento")
     return False
 
+# Guarda todos los datos procesados en volumen compartido para elastic
+def guardar_datos_para_elastic():
+    import shutil
+    
+    print("\nCopiando todos los datos procesados para el contenedor elastic")
+    try:
+        # Directorio de destino para todos los archivos
+        directorio_destino = '/app/shared-data/data'
+        
+        # Crear directorio si no existe
+        os.makedirs(directorio_destino, exist_ok=True)
+        print(f"Directorio de destino creado/verificado: {directorio_destino}")
+        
+        # Mapeo de resultados a copiar
+        archivos_a_copiar = {
+            'data_unique': 'data_unique.csv',
+            'event_counts': 'event_counts.csv',
+            'incidentes_por_comuna': 'incidentes_por_comuna.csv',
+            'incidentes_ciudad_tipo': 'incidentes_ciudad_tipo.csv',
+            'evolucion_temporal_diaria': 'evolucion_temporal_diaria.csv',
+            'evolucion_por_tipo': 'evolucion_por_tipo.csv',
+            'distribucion_horaria': 'distribucion_horaria.csv',
+            'picos_por_hora_tipo': 'picos_por_hora_tipo.csv'
+        }
+        
+        archivos_copiados = 0
+        
+        for carpeta_resultado, nombre_archivo in archivos_a_copiar.items():
+            archivo_origen = f'/app/processing/results/{carpeta_resultado}/part-r-00000'
+            archivo_destino = os.path.join(directorio_destino, nombre_archivo)
+            
+            if os.path.exists(archivo_origen):
+                shutil.copy2(archivo_origen, archivo_destino)
+                print(f"  ✓ {carpeta_resultado} -> {nombre_archivo}")
+                archivos_copiados += 1
+            else:
+                print(f"  ✗ No encontrado: {archivo_origen}")
+        
+        # También copiar filtered_events si existe
+        archivo_filtered = '/app/processing/results/filtered_events/part-m-00000'
+        if os.path.exists(archivo_filtered):
+            shutil.copy2(archivo_filtered, os.path.join(directorio_destino, 'filtered_events.csv'))
+            print(f"  ✓ filtered_events -> filtered_events.csv")
+            archivos_copiados += 1
+        
+        print(f"\nTotal de archivos copiados: {archivos_copiados}")
+        
+        if archivos_copiados > 0:
+            print(f"Todos los datos procesados disponibles en: {directorio_destino}")
+            return True
+        else:
+            print("No se pudo copiar ningún archivo de resultados")
+            return False
+        
+    except Exception as e:
+        print(f"Error copiando datos para elastic: {str(e)}")
+        return False
+
 # Orquesta todo el procesamiento
 
 def main():
@@ -174,6 +233,7 @@ def main():
     print("\nIniciando procesamiento de datos")
     if procesar_con_pig():
         print("Procesamiento completado exitosamente")
+        guardar_datos_para_elastic()
     else:
         print("Error en el procesamiento")
         sys.exit(1)

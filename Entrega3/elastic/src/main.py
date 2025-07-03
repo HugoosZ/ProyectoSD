@@ -464,7 +464,7 @@ def crear_data_views_kibana():
 
 
 def realizar_consultas_estaticas():
-    """Realizar consultas estáticas comparando datos procesados vs no procesados"""
+    """Realizar consultas estáticas y mostrar solo los resultados"""
     try:
         es = Elasticsearch("http://elasticsearch:9200")
         if not es.ping():
@@ -546,8 +546,6 @@ def realizar_consultas_estaticas():
             }
         ]
         
-        resultados_cache = {}
-        
         for consulta in consultas:
             print(f"\n--- {consulta['nombre']} ---")
             
@@ -581,16 +579,6 @@ def realizar_consultas_estaticas():
                 if 'aggregations' in resultado_unique:
                     mostrar_agregaciones(resultado_unique['aggregations'], "  PROC")
                     
-                # GUARDAR EN CACHÉ solo los datos procesados
-                resultado_para_cache = {
-                    'consulta': consulta['nombre'],
-                    'total_documentos': total_unique,
-                    'timestamp': datetime.now().isoformat(),
-                    'agregaciones': resultado_unique.get('aggregations', {})
-                }
-                
-                resultados_cache[consulta['nombre']] = resultado_para_cache
-                
             except Exception as e:
                 print(f"❌ Error en datos procesados: {e}")
                 resultado_unique = None
@@ -601,11 +589,7 @@ def realizar_consultas_estaticas():
                 porcentaje_reduccion = (diferencia / total_raw * 100) if total_raw > 0 else 0
                 print(f"📈 Diferencia: {diferencia} eventos ({porcentaje_reduccion:.1f}% reducción)")
         
-        # Enviar resultados al caché
-        if resultados_cache:
-            enviar_a_cache(resultados_cache)
-            
-        print(f"\n✅ Consultas completadas. {len(resultados_cache)} resultados enviados a caché.")
+        print(f"\n✅ Consultas completadas - solo mostrar resultados.")
         
     except Exception as e:
         print(f"Error en consultas estáticas: {e}")
@@ -622,57 +606,6 @@ def mostrar_agregaciones(aggs, prefijo=""):
                 else:
                     print(f"{prefijo}   - {bucket['key']}: {bucket['doc_count']}")
 
-
-def enviar_a_cache(datos):
-    """Enviar datos procesados al servicio de caché Redis"""
-    import requests
-    import json
-    
-    try:
-        cache_url = "http://waze-cache-service:8000"
-        
-        for nombre_consulta, resultado in datos.items():
-            # Crear clave única para la consulta
-            cache_key = f"consulta_estatica:{nombre_consulta.lower().replace(' ', '_')}"
-            
-            payload = {
-                "key": cache_key,
-                "value": json.dumps(resultado),
-                "ttl": 3600  # 1 hora de TTL
-            }
-            
-            try:
-                response = requests.post(f"{cache_url}/set", json=payload, timeout=5)
-                if response.status_code == 200:
-                    print(f"💾 Guardado en caché: {nombre_consulta}")
-                else:
-                    print(f"⚠️  Error guardando en caché {nombre_consulta}: {response.status_code}")
-            except Exception as e:
-                print(f"⚠️  Error conectando al caché para {nombre_consulta}: {e}")
-                
-    except Exception as e:
-        print(f"Error enviando datos al caché: {e}")
-
-
-def obtener_desde_cache(nombre_consulta):
-    """Obtener resultados desde el caché"""
-    import requests
-    import json
-    
-    try:
-        cache_url = "http://waze-cache-service:8000"
-        cache_key = f"consulta_estatica:{nombre_consulta.lower().replace(' ', '_')}"
-        
-        response = requests.get(f"{cache_url}/get/{cache_key}", timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('found'):
-                return json.loads(data['value'])
-        return None
-        
-    except Exception as e:
-        print(f"Error obteniendo desde caché: {e}")
-        return None
 
 
 def main():
