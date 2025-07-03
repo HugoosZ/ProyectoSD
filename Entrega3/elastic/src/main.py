@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from conexion import IntentoConexion
 import pandas as pd
 from elasticsearch import Elasticsearch
@@ -9,400 +10,461 @@ sys.path.insert(0, "/app/storage")
 from mongo_storage import MongoStorage
 
 
-def procesar_y_subir_csv(es, archivo_path, nombre_archivo):
-    """Procesar un archivo CSV y subirlo a Elasticsearch"""
-    try:
-        print(f"\nProcesando archivo: {nombre_archivo}")
+class ElasticsearchManager:
+    def __init__(self):
+        """Inicializar el gestor de Elasticsearch"""
+        print("ElasticsearchManager inicializado correctamente")
+        self.es_url = "http://elasticsearch:9200"
+        self.es = None
+        self._conectar()
+    
+    def _conectar(self):
+        """Establecer conexión con Elasticsearch"""
+        try:
+            self.es = Elasticsearch(self.es_url)
+            if not self.es.ping():
+                print("No se pudo conectar a Elasticsearch")
+                self.es = None
+                return False
+            print("Conexión a Elasticsearch exitosa")
+            return True
+        except Exception as e:
+            print(f"Error conectando a Elasticsearch: {e}")
+            self.es = None
+            return False
+    
+    def verificar_conexion(self):
+        """Verificar si la conexión está activa"""
+        if not self.es:
+            return self._conectar()
         
-        # Obtener nombres de columnas específicos para cada tipo de archivo
-        columnas = obtener_nombres_columnas(nombre_archivo)
-        df = pd.read_csv(archivo_path, header=None, names=columnas)
-        print(f"Filas leidas: {len(df)}")
-        
-        # Crear nombre del índice basado en el archivo
-        indice_nombre = f"waze_{nombre_archivo.replace('.csv', '').replace('_', '-')}"
-        print(f"Indice destino: {indice_nombre}")
-        
-        # Configurar mapeo específico según el tipo de datos
-        mapeo = crear_mapeo_para_archivo(nombre_archivo, df)
-        
-        # Crear el índice si no existe
-        if not es.indices.exists(index=indice_nombre):
-            print(f"Creando indice: {indice_nombre}")
-            configuracion_indice = crear_configuracion_indice()
-            configuracion_indice["mappings"] = mapeo
-            es.indices.create(index=indice_nombre, body=configuracion_indice)
-        else:
-            # Verificar si existe conflicto de mapeo (especialmente para location)
-            try:
-                current_mapping = es.indices.get_mapping(index=indice_nombre)
-                location_type = None
-                if indice_nombre in current_mapping:
-                    props = current_mapping[indice_nombre].get('mappings', {}).get('properties', {})
-                    if 'location' in props:
-                        location_type = props['location'].get('type')
-                
-                # Si location no es geo_point, recrear el índice
-                if location_type and location_type != 'geo_point':
-                    print(f"Recreando indice por conflicto de mapeo...")
-                    es.indices.delete(index=indice_nombre)
-                    configuracion_indice = crear_configuracion_indice()
-                    configuracion_indice["mappings"] = mapeo
-                    es.indices.create(index=indice_nombre, body=configuracion_indice)
-            except Exception as e:
-                print(f"Error verificando mapeo: {e}")
+        try:
+            return self.es.ping()
+        except:
+            return self._conectar()
 
-        # Indexar documentos uno por uno con validación
-        documentos_indexados = 0
-        documentos_con_error = 0
-        
-        for index, row in df.iterrows():
-            try:
-                # Convertir fila a documento JSON
-                doc = row.to_dict()
-                
-                # Limpiar y validar datos primero
-                doc = limpiar_documento(doc)
-                
-                if not doc:
+    def procesar_y_subir_csv(self, archivo_path, nombre_archivo):
+        """Procesar un archivo CSV y subirlo a Elasticsearch"""
+        if not self.verificar_conexion():
+            print("No hay conexión a Elasticsearch")
+            return False
+            
+        try:
+            print(f"\nProcesando archivo: {nombre_archivo}")
+            
+            # Obtener nombres de columnas específicos para cada tipo de archivo
+            columnas = self.obtener_nombres_columnas(nombre_archivo)
+            df = pd.read_csv(archivo_path, header=None, names=columnas)
+            print(f"Filas leidas: {len(df)}")
+            
+            # Guardar copia para cache en carpeta compartida
+            self._guardar_copia_cache(df, nombre_archivo)
+            
+            # Crear nombre del índice basado en el archivo
+            indice_nombre = f"waze_{nombre_archivo.replace('.csv', '').replace('_', '-')}"
+            print(f"Indice destino: {indice_nombre}")
+            
+            # Configurar mapeo específico según el tipo de datos
+            mapeo = self.crear_mapeo_para_archivo(nombre_archivo, df)
+            
+            # Crear el índice si no existe
+            if not self.es.indices.exists(index=indice_nombre):
+                print(f"Creando indice: {indice_nombre}")
+                configuracion_indice = self.crear_configuracion_indice()
+                configuracion_indice["mappings"] = mapeo
+                self.es.indices.create(index=indice_nombre, body=configuracion_indice)
+            else:
+                # Verificar si existe conflicto de mapeo (especialmente para location)
+                try:
+                    current_mapping = self.es.indices.get_mapping(index=indice_nombre)
+                    location_type = None
+                    if indice_nombre in current_mapping:
+                        props = current_mapping[indice_nombre].get('mappings', {}).get('properties', {})
+                        if 'location' in props:
+                            location_type = props['location'].get('type')
+                    
+                    # Si location no es geo_point, recrear el índice
+                    if location_type and location_type != 'geo_point':
+                        print(f"Recreando indice por conflicto de mapeo...")
+                        self.es.indices.delete(index=indice_nombre)
+                        configuracion_indice = self.crear_configuracion_indice()
+                        configuracion_indice["mappings"] = mapeo
+                        self.es.indices.create(index=indice_nombre, body=configuracion_indice)
+                except Exception as e:
+                    print(f"Error verificando mapeo: {e}")
+
+            # Indexar documentos uno por uno con validación
+            documentos_indexados = 0
+            documentos_con_error = 0
+            
+            for index, row in df.iterrows():
+                try:
+                    # Convertir fila a documento JSON
+                    doc = row.to_dict()
+                    
+                    # Limpiar y validar datos primero
+                    doc = self.limpiar_documento(doc)
+                    
+                    if not doc:
+                        documentos_con_error += 1
+                        continue
+                    
+                    # Usar la fecha del evento como @timestamp si existe, sino usar la actual
+                    if 'fecha' in doc and doc['fecha']:
+                        try:
+                            # Intentar usar la fecha del evento
+                            fecha_evento = pd.to_datetime(doc['fecha'], errors='coerce')
+                            if not pd.isna(fecha_evento):
+                                doc['@timestamp'] = fecha_evento.isoformat()
+                            else:
+                                # Si no se puede parsear, usar timestamp actual
+                                doc['@timestamp'] = datetime.now().isoformat()
+                        except:
+                            doc['@timestamp'] = datetime.now().isoformat()
+                    else:
+                        # Si no hay fecha del evento, usar timestamp actual
+                        doc['@timestamp'] = datetime.now().isoformat()
+                    
+                    # Solo indexar documentos válidos
+                    if doc:
+                        self.es.index(index=indice_nombre, body=doc)
+                        documentos_indexados += 1
+                    else:
+                        documentos_con_error += 1
+                        
+                except Exception as e:
+                    print(f"Error indexando fila {index}: {e}")
                     documentos_con_error += 1
                     continue
-                
-                # Usar la fecha del evento como @timestamp si existe, sino usar la actual
-                if 'fecha' in doc and doc['fecha']:
-                    try:
-                        # Intentar usar la fecha del evento
-                        fecha_evento = pd.to_datetime(doc['fecha'], errors='coerce')
-                        if not pd.isna(fecha_evento):
-                            doc['@timestamp'] = fecha_evento.isoformat()
-                        else:
-                            # Si no se puede parsear, usar timestamp actual
-                            doc['@timestamp'] = datetime.now().isoformat()
-                    except:
-                        doc['@timestamp'] = datetime.now().isoformat()
-                else:
-                    # Si no hay fecha del evento, usar timestamp actual
-                    doc['@timestamp'] = datetime.now().isoformat()
-                
-                # Solo indexar documentos válidos
-                if doc:
-                    es.index(index=indice_nombre, body=doc)
-                    documentos_indexados += 1
-                else:
-                    documentos_con_error += 1
-                    
-            except Exception as e:
-                print(f"Error indexando fila {index}: {e}")
-                documentos_con_error += 1
-                continue
 
-        print(f"Documentos indexados: {documentos_indexados}/{len(df)}")
-        if documentos_con_error > 0:
-            print(f"Documentos con errores: {documentos_con_error}")
-        return True
-        
-    except Exception as e:
-        print(f"Error procesando {nombre_archivo}: {e}")
-        return False
+            print(f"Documentos indexados: {documentos_indexados}/{len(df)}")
+            if documentos_con_error > 0:
+                print(f"Documentos con errores: {documentos_con_error}")
+            return True
+            
+        except Exception as e:
+            print(f"Error procesando {nombre_archivo}: {e}")
+            return False
 
+    def _guardar_copia_cache(self, df, nombre_archivo):
+        """Guardar copia del CSV en carpeta compartida para cache"""
+        try:
+            cache_dir = "/app/shared-data/query_results"
+            os.makedirs(cache_dir, exist_ok=True)
+            cache_path = os.path.join(cache_dir, nombre_archivo)
+            
+            # Guardar sin índices ni encabezados
+            df.to_csv(cache_path, index=False, header=False)
+            print(f"Copia guardada en cache: {cache_path}")
+            return True
+        except Exception as e:
+            print(f"Error guardando copia para cache: {e}")
+            return False
 
-def crear_mapeo_para_archivo(nombre_archivo, df):
-    """Crear mapeo específico según el tipo de archivo"""
-    # Mapeo base común para todos los archivos
-    mapeo_base = {
-        "properties": {
-            "@timestamp": {"type": "date"},
-            "location": {"type": "geo_point"}  # Campo geo para mapas
-        }
-    }
-    
-    # Mapeos específicos según el tipo de archivo procesado
-    if "event_counts" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "tipo_evento": {"type": "keyword"},
-            "cantidad": {"type": "integer"}
-        })
-    elif any(x in nombre_archivo for x in ["no_processing_data", "data_unique", "filtered_events"]):
-        mapeo_base["properties"].update({
-            "tipo": {"type": "keyword"},
-            "subtipo": {"type": "keyword"},
-            "calle": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-            "comuna": {"type": "keyword"},
-            "fecha": {"type": "date"},
-            "latitud": {"type": "float"},
-            "longitud": {"type": "float"}
-        })
-    elif "distribucion_horaria" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "hora": {"type": "integer"},
-            "cantidad": {"type": "integer"}
-        })
-    elif "incidentes_por_comuna" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "comuna": {"type": "keyword"},
-            "cantidad_incidentes": {"type": "integer"},
-            "porcentaje": {"type": "float"}
-        })
-    elif "evolucion_temporal_diaria" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "fecha": {"type": "date"},
-            "cantidad": {"type": "integer"}
-        })
-    elif "evolucion_por_tipo" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "fecha": {"type": "date"},
-            "tipo_evento": {"type": "keyword"},
-            "cantidad": {"type": "integer"}
-        })
-    elif "incidentes_ciudad_tipo" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "comuna": {"type": "keyword"},
-            "tipo_evento": {"type": "keyword"},
-            "cantidad": {"type": "integer"}
-        })
-    elif "picos_por_hora_tipo" in nombre_archivo:
-        mapeo_base["properties"].update({
-            "hora": {"type": "integer"},
-            "tipo_evento": {"type": "keyword"},
-            "cantidad": {"type": "integer"}
-        })
-    else:
-        # Mapeo genérico basado en el análisis automático de tipos
-        for col in df.columns:
-            if df[col].dtype in ['int64', 'int32']:
-                mapeo_base["properties"][col] = {"type": "integer"}
-            elif df[col].dtype in ['float64', 'float32']:
-                mapeo_base["properties"][col] = {"type": "float"}
-            elif 'fecha' in col.lower() or 'date' in col.lower():
-                mapeo_base["properties"][col] = {"type": "date"}
-            else:
-                # Text con keyword para aggregations
-                mapeo_base["properties"][col] = {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword"}}
-                }
-    
-    return mapeo_base
-
-
-def crear_configuracion_indice():
-    """Crear configuración del índice para optimizar el rendimiento"""
-    return {
-        "settings": {
-            "index": {
-                "max_result_window": 50000,
-                "max_docvalue_fields_search": 200
+    def crear_mapeo_para_archivo(self, nombre_archivo, df):
+        """Crear mapeo específico según el tipo de archivo"""
+        # Mapeo base común para todos los archivos
+        mapeo_base = {
+            "properties": {
+                "@timestamp": {"type": "date"},
+                "location": {"type": "geo_point"}  # Campo geo para mapas
             }
         }
-    }
-
-
-def limpiar_documento(doc):
-    """Limpiar y convertir tipos de datos en el documento"""
-    doc_limpio = {}
-    
-    for key, value in doc.items():
-        # Saltar valores nulos o vacíos
-        if pd.isna(value) or value is None:
-            continue
-            
-        # Manejar coordenadas geográficas
-        if key in ['latitud', 'longitud', 'lat', 'lng', 'latitude', 'longitude']:
-            try:
-                doc_limpio[key] = float(value)
-            except:
-                continue
-        # Manejar campos numéricos enteros
-        elif key in ['cantidad', 'count', 'hora', 'hour']:
-            try:
-                doc_limpio[key] = int(value)
-            except:
-                continue
-        # Manejar campos de fecha con validación
-        elif 'fecha' in key.lower() or 'date' in key.lower():
-            try:
-                # Validar que sea una cadena válida
-                if not isinstance(value, str) or not value.strip():
-                    continue
-                    
-                # Filtrar valores que no son fechas reales
-                valores_invalidos = ['hora', 'hour', 'fecha', 'date', 'time', 'n/a', 'null', 'none', '']
-                if value.lower().strip() in valores_invalidos:
-                    continue
-                
-                # Intentar parsear la fecha
-                fecha_parseada = pd.to_datetime(value, errors='coerce')
-                if pd.isna(fecha_parseada):
-                    continue
-                
-                doc_limpio[key] = fecha_parseada.isoformat()
-            except Exception:
-                continue
-        else:
-            # Convertir todo lo demás a string
-            doc_limpio[key] = str(value)
-    
-    # Crear campo geo_point para mapas si tenemos coordenadas válidas
-    if 'latitud' in doc_limpio and 'longitud' in doc_limpio:
-        try:
-            lat = float(doc_limpio['latitud'])
-            lon = float(doc_limpio['longitud'])
-            # Validar rangos geográficos
-            if -90 <= lat <= 90 and -180 <= lon <= 180:
-                doc_limpio['location'] = f"{lat},{lon}"
-        except (ValueError, TypeError):
-            pass
-    
-    return doc_limpio
-
-
-def limpiar_indices_waze(es):
-    """Eliminar todos los índices de Waze existentes para evitar duplicados"""
-    try:
-        print("\nLimpiando indices existentes...")
-        indices_existentes = es.indices.get_alias(index="waze*")
         
-        if indices_existentes:
-            print(f"Eliminando {len(indices_existentes)} indices de Waze:")
-            for indice in indices_existentes.keys():
+        # Mapeos específicos según el tipo de archivo procesado
+        if "event_counts" in nombre_archivo:
+            mapeo_base["properties"].update({
+                "tipo_evento": {"type": "keyword"},
+                "cantidad": {"type": "integer"}
+            })
+        elif any(x in nombre_archivo for x in ["no_processing_data", "data_unique"]):
+            mapeo_base["properties"].update({
+                "tipo": {"type": "keyword"},
+                "subtipo": {"type": "keyword"},
+                "calle": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                "comuna": {"type": "keyword"},
+                "fecha": {"type": "date"},
+                "latitud": {"type": "float"},
+                "longitud": {"type": "float"}
+            })
+        else:
+            # Mapeo genérico basado en el análisis automático de tipos
+            for col in df.columns:
+                if df[col].dtype in ['int64', 'int32']:
+                    mapeo_base["properties"][col] = {"type": "integer"}
+                elif df[col].dtype in ['float64', 'float32']:
+                    mapeo_base["properties"][col] = {"type": "float"}
+                elif 'fecha' in col.lower() or 'date' in col.lower():
+                    mapeo_base["properties"][col] = {"type": "date"}
+                else:
+                    # Text con keyword para aggregations
+                    mapeo_base["properties"][col] = {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}}
+                    }
+        
+        return mapeo_base
+
+    def crear_configuracion_indice(self):
+        """Crear configuración del índice para optimizar el rendimiento"""
+        return {
+            "settings": {
+                "index": {
+                    "max_result_window": 50000,
+                    "max_docvalue_fields_search": 200
+                }
+            }
+        }
+
+    def limpiar_documento(self, doc):
+        """Limpiar y convertir tipos de datos en el documento"""
+        doc_limpio = {}
+        
+        for key, value in doc.items():
+            # Saltar valores nulos o vacíos
+            if pd.isna(value) or value is None:
+                continue
+                
+            # Manejar coordenadas geográficas
+            if key in ['latitud', 'longitud', 'lat', 'lng', 'latitude', 'longitude']:
                 try:
-                    es.indices.delete(index=indice)
-                    print(f"  ✓ {indice}")
-                except Exception as e:
-                    print(f"  ✗ {indice}: {e}")
-        else:
-            print("No se encontraron indices de Waze existentes")
-            
-    except Exception as e:
-        print(f"Error durante la limpieza de indices: {e}")
-
-
-def subir_datasets_a_elasticsearch(data_folder_path):
-    """Función principal para subir todos los datasets a Elasticsearch"""
-    print("\nIniciando carga a Elasticsearch...")
-    
-    # Establecer conexión con Elasticsearch
-    try:
-        es = Elasticsearch("http://elasticsearch:9200")
-        if not es.ping():
-            print("No se pudo conectar a Elasticsearch")
-            return False
-        print("Conexion a Elasticsearch exitosa")
-    except Exception as e:
-        print(f"Error conectando a Elasticsearch: {e}")
-        return False
-    
-    # Verificar que el directorio de datos existe
-    if not os.path.exists(data_folder_path):
-        print(f"Directorio no encontrado: {data_folder_path}")
-        return False
-    
-    # Buscar archivos CSV para procesar (excluir datos sin procesar para evitar duplicados)
-    archivos_csv = [f for f in os.listdir(data_folder_path) 
-                    if f.endswith('.csv') and 'no_processing_data' not in f]
-    
-    if not archivos_csv:
-        print(f"No se encontraron archivos CSV procesados en: {data_folder_path}")
-        return False
-    
-    print(f"Archivos CSV procesados encontrados: {len(archivos_csv)}")
-    
-    # Procesar cada archivo encontrado (solo datos procesados)
-    archivos_procesados = 0
-    for archivo in archivos_csv:
-        archivo_path = os.path.join(data_folder_path, archivo)
-        if procesar_y_subir_csv(es, archivo_path, archivo):
-            archivos_procesados += 1
-    
-    print(f"\nResumen: {archivos_procesados}/{len(archivos_csv)} archivos procesados exitosamente (sin incluir datos raw)")
-    
-    # Mostrar resumen de índices creados
-    try:
-        indices = es.indices.get_alias(index="waze*")
-        print(f"\nTodos los índices de Waze:")
-        for indice in sorted(indices.keys()):
-            doc_count = es.count(index=indice)['count']
-            print(f"   - {indice}: {doc_count} documentos")
-    except Exception as e:
-        print(f"Error listando indices: {e}")
-    
-    return archivos_procesados > 0
-
-
-def obtener_nombres_columnas(nombre_archivo):
-    """Obtener nombres de columnas apropiados según el tipo de archivo"""
-    if "event_counts" in nombre_archivo:
-        return ["tipo_evento", "cantidad"]
-    elif "no_processing_data" in nombre_archivo:
-        return ["tipo", "subtipo", "calle", "comuna", "fecha", "latitud", "longitud"]
-    elif "data_unique" in nombre_archivo:
-        return ["tipo", "subtipo", "calle", "comuna", "fecha", "latitud", "longitud"]
-    elif "filtered_events" in nombre_archivo:
-        return ["tipo", "subtipo", "calle", "comuna", "fecha", "latitud", "longitud"]
-    elif "distribucion_horaria" in nombre_archivo:
-        return ["hora", "cantidad"]
-    elif "incidentes_por_comuna" in nombre_archivo:
-        return ["comuna", "cantidad_incidentes", "porcentaje"]
-    elif "evolucion_temporal_diaria" in nombre_archivo:
-        return ["fecha", "cantidad"]
-    elif "evolucion_por_tipo" in nombre_archivo:
-        return ["fecha", "tipo_evento", "cantidad"]
-    elif "incidentes_ciudad_tipo" in nombre_archivo:
-        return ["comuna", "tipo_evento", "cantidad"]
-    elif "picos_por_hora_tipo" in nombre_archivo:
-        return ["hora", "tipo_evento", "cantidad"]
-    else:
-        # Nombres genéricos para archivos desconocidos
-        return [f"campo_{i}" for i in range(10)]  # Asumiendo máximo 10 columnas
-
-
-
-
-def verificar_datos_actualizados():
-    """
-    Verifica si los datos procesados están actualizados comparando
-    si existen todos los índices procesados esperados en ES.
-    Si falta algún índice, requiere recarga completa.
-    """
-    try:
-        es = Elasticsearch("http://elasticsearch:9200")
-        if not es.ping():
-            print("Elasticsearch no disponible")
-            return False
-            
-        # Solo verificar que existan los índices de datasets procesados clave
-        indices_esperados = [
-            'waze_data-unique',
-            'waze_filtered-events', 
-            'waze_distribucion-horaria'
-        ]
+                    doc_limpio[key] = float(value)
+                except:
+                    continue
+            # Manejar campos numéricos enteros
+            elif key in ['cantidad', 'count', 'hora', 'hour']:
+                try:
+                    doc_limpio[key] = int(value)
+                except:
+                    continue
+            # Manejar campos de fecha con validación
+            elif 'fecha' in key.lower() or 'date' in key.lower():
+                try:
+                    # Validar que sea una cadena válida
+                    if not isinstance(value, str) or not value.strip():
+                        continue
+                        
+                    # Filtrar valores que no son fechas reales
+                    valores_invalidos = ['hora', 'hour', 'fecha', 'date', 'time', 'n/a', 'null', 'none', '']
+                    if value.lower().strip() in valores_invalidos:
+                        continue
+                    
+                    # Intentar parsear la fecha
+                    fecha_parseada = pd.to_datetime(value, errors='coerce')
+                    if pd.isna(fecha_parseada):
+                        continue
+                    
+                    doc_limpio[key] = fecha_parseada.isoformat()
+                except Exception:
+                    continue
+            else:
+                # Convertir todo lo demás a string
+                doc_limpio[key] = str(value)
         
-        print("Verificando que existan todos los índices procesados...")
-        
-        for indice in indices_esperados:
+        # Crear campo geo_point para mapas si tenemos coordenadas válidas
+        if 'latitud' in doc_limpio and 'longitud' in doc_limpio:
             try:
-                # Solo verificar que el índice existe y tiene datos
-                response = es.count(index=indice)
-                docs_es = response['count']
+                lat = float(doc_limpio['latitud'])
+                lon = float(doc_limpio['longitud'])
+                # Validar rangos geográficos
+                if -90 <= lat <= 90 and -180 <= lon <= 180:
+                    doc_limpio['location'] = f"{lat},{lon}"
+            except (ValueError, TypeError):
+                pass
+        
+        return doc_limpio
+
+    def limpiar_indices_waze(self):
+        """Eliminar todos los índices de Waze existentes para evitar duplicados"""
+        if not self.verificar_conexion():
+            return
+            
+        try:
+            print("\nLimpiando indices existentes...")
+            indices_existentes = self.es.indices.get_alias(index="waze*")
+            
+            if indices_existentes:
+                print(f"Eliminando {len(indices_existentes)} indices de Waze:")
+                for indice in indices_existentes.keys():
+                    try:
+                        self.es.indices.delete(index=indice)
+                        print(f"  ✓ {indice}")
+                    except Exception as e:
+                        print(f"  ✗ {indice}: {e}")
+            else:
+                print("No se encontraron indices de Waze existentes")
                 
-                if docs_es == 0:
-                    print(f"Índice {indice} existe pero está vacío - se requiere recarga")
+        except Exception as e:
+            print(f"Error durante la limpieza de indices: {e}")
+
+    def subir_datasets_a_elasticsearch(self, data_folder_path):
+        """Función principal para subir todos los datasets a Elasticsearch"""
+        print("\nIniciando carga a Elasticsearch...")
+        
+        if not self.verificar_conexion():
+            return False
+        
+        # Verificar que el directorio de datos existe
+        if not os.path.exists(data_folder_path):
+            print(f"Directorio no encontrado: {data_folder_path}")
+            return False
+        
+        # Buscar archivos CSV para procesar (excluir datos sin procesar para evitar duplicados)
+        archivos_csv = [f for f in os.listdir(data_folder_path) 
+                        if f.endswith('.csv') and 'no_processing_data' not in f]
+        
+        if not archivos_csv:
+            print(f"No se encontraron archivos CSV procesados en: {data_folder_path}")
+            return False
+        
+        print(f"Archivos CSV procesados encontrados: {len(archivos_csv)}")
+        
+        # Procesar cada archivo encontrado (solo datos procesados)
+        archivos_procesados = 0
+        for archivo in archivos_csv:
+            archivo_path = os.path.join(data_folder_path, archivo)
+            if self.procesar_y_subir_csv(archivo_path, archivo):
+                archivos_procesados += 1
+        
+        print(f"\nResumen: {archivos_procesados}/{len(archivos_csv)} archivos procesados exitosamente (sin incluir datos raw)")
+        
+        # Mostrar resumen de índices creados
+        try:
+            indices = self.es.indices.get_alias(index="waze*")
+            print(f"\nTodos los índices de Waze:")
+            for indice in sorted(indices.keys()):
+                doc_count = self.es.count(index=indice)['count']
+                print(f"   - {indice}: {doc_count} documentos")
+        except Exception as e:
+            print(f"Error listando indices: {e}")
+        
+        return archivos_procesados > 0
+
+    def verificar_datos_actualizados(self):
+        """
+        Verifica si los datos procesados están actualizados comparando
+        si existen todos los índices procesados esperados en ES.
+        Si falta algún índice, requiere recarga completa.
+        """
+        if not self.verificar_conexion():
+            return False
+            
+        try:
+            # Solo verificar que existan los índices de datasets procesados clave
+            indices_esperados = [
+                'waze_data-unique',
+                'waze_filtered-events', 
+                'waze_distribucion-horaria'
+            ]
+            
+            print("Verificando que existan todos los índices procesados...")
+            
+            for indice in indices_esperados:
+                try:
+                    # Solo verificar que el índice existe y tiene datos
+                    response = self.es.count(index=indice)
+                    docs_es = response['count']
+                    
+                    if docs_es == 0:
+                        print(f"Índice {indice} existe pero está vacío - se requiere recarga")
+                        return False
+                        
+                    print(f"  ✓ {indice}: {docs_es} documentos")
+                    
+                except Exception as e:
+                    print(f"Índice {indice} no existe - se requiere carga completa")
                     return False
                     
-                print(f"  ✓ {indice}: {docs_es} documentos")
-                
-            except Exception as e:
-                print(f"Índice {indice} no existe - se requiere carga completa")
-                return False
-                
-        print("Todos los índices procesados están presentes y con datos")
-        return True
-        
-    except Exception as e:
-        print(f"Error verificando datos procesados: {e}")
-        return False
+            print("Todos los índices procesados están presentes y con datos")
+            return True
+            
+        except Exception as e:
+            print(f"Error verificando datos procesados: {e}")
+            return False
+
+    def ejecutar_consulta(self, indice, query):
+        """Ejecutar una consulta específica en un índice"""
+        if not self.verificar_conexion():
+            return None
+            
+        try:
+            resultado = self.es.search(index=indice, body=query)
+            return resultado
+        except Exception as e:
+            print(f"Error ejecutando consulta en {indice}: {e}")
+            return None
+
+    def obtener_conteo_por_tipo(self, indice="waze*"):
+        """Obtener conteo de eventos por tipo"""
+        query = {
+            "size": 0,
+            "aggs": {
+                "tipos": {
+                    "terms": {
+                        "field": "tipo",
+                        "size": 10
+                    }
+                }
+            }
+        }
+        return self.ejecutar_consulta(indice, query)
+
+    def obtener_eventos_por_comuna(self, indice="waze*", size=10):
+        """Obtener eventos por comuna"""
+        query = {
+            "size": 0,
+            "aggs": {
+                "comunas": {
+                    "terms": {
+                        "field": "comuna",
+                        "size": size
+                    }
+                }
+            }
+        }
+        return self.ejecutar_consulta(indice, query)
+
+    def obtener_distribucion_temporal(self, indice="waze*", intervalo="day"):
+        """Obtener distribución temporal de eventos"""
+        query = {
+            "size": 0,
+            "aggs": {
+                "por_tiempo": {
+                    "date_histogram": {
+                        "field": "@timestamp",
+                        "calendar_interval": intervalo
+                    }
+                }
+            }
+        }
+        return self.ejecutar_consulta(indice, query)
+
+    def buscar_eventos_recientes(self, indice="waze*", horas=24):
+        """Buscar eventos de las últimas X horas"""
+        query = {
+            "query": {
+                "range": {
+                    "@timestamp": {
+                        "gte": f"now-{horas}h"
+                    }
+                }
+            },
+            "size": 0
+        }
+        return self.ejecutar_consulta(indice, query)
+
+    def obtener_nombres_columnas(self, nombre_archivo):
+        """Obtener nombres de columnas apropiados según el tipo de archivo"""
+        if "no_processing_data" in nombre_archivo:
+            return ["tipo", "subtipo", "calle", "comuna", "fecha", "latitud", "longitud"]
+        elif "data_unique" in nombre_archivo:
+            return ["tipo", "subtipo", "calle", "comuna", "fecha", "latitud", "longitud"]
+        else:
+            # Nombres genéricos para archivos desconocidos
+            return [f"campo_{i}" for i in range(10)]  # Asumiendo máximo 10 columnas
 
 
+# Funciones auxiliares que no requieren la clase
 def crear_data_views_kibana():
     """Crear Data Views automáticamente en Kibana para los índices de Waze"""
     import requests
@@ -431,11 +493,7 @@ def crear_data_views_kibana():
         data_views = [
             {"title": "waze*", "name": "Waze - Todos los Datos", "timeFieldName": "@timestamp"},
             {"title": "waze_no-processing-data", "name": "Waze - Datos Sin Procesar", "timeFieldName": "@timestamp"},
-            {"title": "waze_filtered-events", "name": "Waze - Eventos Filtrados", "timeFieldName": "@timestamp"},
             {"title": "waze_data-unique", "name": "Waze - Datos Únicos", "timeFieldName": "@timestamp"},
-            {"title": "waze_distribucion-horaria", "name": "Waze - Distribución Horaria", "timeFieldName": "@timestamp"},
-            {"title": "waze_event-counts", "name": "Waze - Conteo de Eventos", "timeFieldName": "@timestamp"},
-            {"title": "waze_incidentes-por-comuna", "name": "Waze - Incidentes por Comuna", "timeFieldName": "@timestamp"}
         ]
         
         # Obtener data views existentes
@@ -464,7 +522,12 @@ def crear_data_views_kibana():
 
 
 def realizar_consultas_estaticas():
-    """Realizar consultas estáticas y mostrar solo los resultados"""
+    """
+    Ejecutar consultas estáticas en Elasticsearch, guardar resultados como JSON,
+    leer los JSON guardados y verificar que coincidan con los resultados originales.
+    
+    Guarda archivos JSON en: /app/shared-data/query_results/
+    """
     try:
         es = Elasticsearch("http://elasticsearch:9200")
         if not es.ping():
@@ -473,10 +536,15 @@ def realizar_consultas_estaticas():
             
         print("\n=== CONSULTAS ESTÁTICAS A ELASTICSEARCH ===")
         
-        # Definir consultas estáticas para comparar
+        # Crear directorio para resultados JSON
+        directorio_resultados = '/app/shared-data/query_results'
+        os.makedirs(directorio_resultados, exist_ok=True)
+        
+        # Definir consultas estáticas simples
         consultas = [
             {
                 "nombre": "Total de eventos por tipo",
+                "archivo": "eventos_por_tipo.json",
                 "query": {
                     "size": 0,
                     "aggs": {
@@ -491,6 +559,7 @@ def realizar_consultas_estaticas():
             },
             {
                 "nombre": "Eventos por comuna (top 10)",
+                "archivo": "eventos_por_comuna.json",
                 "query": {
                     "size": 0,
                     "aggs": {
@@ -504,21 +573,8 @@ def realizar_consultas_estaticas():
                 }
             },
             {
-                "nombre": "Distribución por subtipo",
-                "query": {
-                    "size": 0,
-                    "aggs": {
-                        "subtipos": {
-                            "terms": {
-                                "field": "subtipo",
-                                "size": 10
-                            }
-                        }
-                    }
-                }
-            },
-            {
                 "nombre": "Eventos en las últimas 24 horas",
+                "archivo": "eventos_recientes_24h.json",
                 "query": {
                     "query": {
                         "range": {
@@ -529,88 +585,105 @@ def realizar_consultas_estaticas():
                     },
                     "size": 0
                 }
-            },
-            {
-                "nombre": "Promedio de eventos por día",
-                "query": {
-                    "size": 0,
-                    "aggs": {
-                        "por_dia": {
-                            "date_histogram": {
-                                "field": "@timestamp",
-                                "calendar_interval": "day"
-                            }
-                        }
-                    }
-                }
             }
         ]
+        
+        archivos_generados = []
         
         for consulta in consultas:
             print(f"\n--- {consulta['nombre']} ---")
             
-            # Consultar datos NO procesados
             try:
-                resultado_raw = es.search(
-                    index="waze_no-processing-data",
-                    body=consulta["query"]
-                )
-                total_raw = resultado_raw['hits']['total']['value']
-                print(f"📊 Datos NO procesados: {total_raw} documentos totales")
-                
-                # Mostrar agregaciones si existen
-                if 'aggregations' in resultado_raw:
-                    mostrar_agregaciones(resultado_raw['aggregations'], "  RAW")
-                    
-            except Exception as e:
-                print(f"❌ Error en datos no procesados: {e}")
-                resultado_raw = None
-            
-            # Consultar datos PROCESADOS (únicos)
-            try:
-                resultado_unique = es.search(
+                # 1. Ejecutar consulta en Elasticsearch
+                print("Ejecutando consulta original...")
+                resultado_original = es.search(
                     index="waze_data-unique",
                     body=consulta["query"]
                 )
-                total_unique = resultado_unique['hits']['total']['value']
-                print(f"🔹 Datos PROCESADOS: {total_unique} documentos totales")
+                
+                total_docs = resultado_original['hits']['total']['value']
+                print(f"📊 Resultado original: {total_docs} documentos")
                 
                 # Mostrar agregaciones si existen
-                if 'aggregations' in resultado_unique:
-                    mostrar_agregaciones(resultado_unique['aggregations'], "  PROC")
+                if 'aggregations' in resultado_original:
+                    print("   Agregaciones originales:")
+                    for agg_key, agg_data in resultado_original['aggregations'].items():
+                        if 'buckets' in agg_data:
+                            for bucket in agg_data['buckets'][:3]:  # Solo primeros 3
+                                print(f"     - {bucket['key']}: {bucket['doc_count']}")
+                
+                # 2. Guardar resultado completo como JSON
+                archivo_destino = os.path.join(directorio_resultados, consulta["archivo"])
+                with open(archivo_destino, 'w', encoding='utf-8') as f:
+                    json.dump(resultado_original, f, indent=2, ensure_ascii=False, default=str)
+                
+                print(f"Guardado en: {consulta['archivo']}")
+                
+                # 3. Leer JSON guardado
+                print("Leyendo JSON guardado...")
+                with open(archivo_destino, 'r', encoding='utf-8') as f:
+                    resultado_cargado = json.load(f)
+                
+                # 4. Comparar resultados
+                total_docs_cargado = resultado_cargado['hits']['total']['value']
+                print(f"🔄 Verificación:")
+                print(f"   Original: {total_docs} documentos")
+                print(f"   Cargado:  {total_docs_cargado} documentos")
+                print(f"   ✓ Coinciden: {'SÍ' if total_docs == total_docs_cargado else 'NO'}")
+                
+                # Verificar agregaciones
+                if 'aggregations' in resultado_original and 'aggregations' in resultado_cargado:
+                    print("   Agregaciones del JSON:")
+                    for agg_key, agg_data in resultado_cargado['aggregations'].items():
+                        if 'buckets' in agg_data:
+                            for bucket in agg_data['buckets'][:3]:
+                                print(f"     - {bucket['key']}: {bucket['doc_count']}")
+                    
+                    aggs_coinciden = resultado_original['aggregations'] == resultado_cargado['aggregations']
+                    print(f"   ✓ Agregaciones coinciden: {'SÍ' if aggs_coinciden else 'NO'}")
+                
+                archivos_generados.append(consulta["archivo"])
+                print(f"   ✅ Consulta completada y verificada")
                     
             except Exception as e:
-                print(f"❌ Error en datos procesados: {e}")
-                resultado_unique = None
-            
-            # Comparación
-            if resultado_raw and resultado_unique:
-                diferencia = total_raw - total_unique
-                porcentaje_reduccion = (diferencia / total_raw * 100) if total_raw > 0 else 0
-                print(f"📈 Diferencia: {diferencia} eventos ({porcentaje_reduccion:.1f}% reducción)")
+                print(f"❌ Error procesando {consulta['nombre']}: {e}")
+                continue
         
-        print(f"\n✅ Consultas completadas - solo mostrar resultados.")
+        # Crear resumen final
+        print(f"\n=== RESUMEN FINAL ===")
+        
+        resumen = {
+            "timestamp": datetime.now().isoformat(),
+            "total_consultas": len(consultas),
+            "directorio": directorio_resultados,
+            "archivos_generados": archivos_generados
+        }
+        
+        archivo_resumen = os.path.join(directorio_resultados, "resumen_consultas.json")
+        with open(archivo_resumen, 'w', encoding='utf-8') as f:
+            json.dump(resumen, f, indent=2, ensure_ascii=False, default=str)
+        
+        print(f"📋 Resumen guardado en: resumen_consultas.json")
+        print(f"📁 Total archivos JSON: {len(archivos_generados) + 1}")
+        print(f"📂 Ubicación: {directorio_resultados}")
+        print(f"\n✅ Proceso completado - {len(archivos_generados)} consultas ejecutadas, guardadas y verificadas")
+        
+        return True
         
     except Exception as e:
-        print(f"Error en consultas estáticas: {e}")
-
-
-def mostrar_agregaciones(aggs, prefijo=""):
-    """Mostrar agregaciones de forma legible"""
-    for key, value in aggs.items():
-        if 'buckets' in value:
-            print(f"{prefijo} {key}:")
-            for bucket in value['buckets'][:5]:  # Solo mostrar top 5
-                if 'key_as_string' in bucket:
-                    print(f"{prefijo}   - {bucket['key_as_string']}: {bucket['doc_count']}")
-                else:
-                    print(f"{prefijo}   - {bucket['key']}: {bucket['doc_count']}")
-
+        print(f"❌ Error en consultas estáticas: {e}")
+        return False
 
 
 def main():
+    # Crear carpeta compartida para cache si no existe
+    os.makedirs('/app/shared-data/query_results', exist_ok=True)
+    
+    # Crear instancia del gestor de Elasticsearch
+    es_manager = ElasticsearchManager()
+    
     # Verificar si los datos están actualizados comparando filas
-    if verificar_datos_actualizados():
+    if es_manager.verificar_datos_actualizados():
         print("\nDatos ya están actualizados - no se requiere carga")
         print("Elasticsearch y Kibana están disponibles en sus contenedores")
         
@@ -622,11 +695,9 @@ def main():
     
     # Limpiar índices existentes de Waze antes de empezar
     try:
-        es = Elasticsearch("http://elasticsearch:9200")
-        if es.ping():
-            limpiar_indices_waze(es)
+        es_manager.limpiar_indices_waze()
     except Exception as e:
-        print(f"Advertencia: Error en conexion inicial: {e}")
+        print(f"Advertencia: Error en limpieza inicial: {e}")
     
     # Exportar datos sin filtrar desde MongoDB
     storage = MongoStorage()
@@ -644,10 +715,9 @@ def main():
     
     # Subir datos sin filtrar a Elasticsearch
     try:
-        es = Elasticsearch("http://elasticsearch:9200")
-        if es.ping() and os.path.exists(ruta_csv_local):
+        if os.path.exists(ruta_csv_local):
             print("Subiendo datos sin filtrar...")
-            procesar_y_subir_csv(es, ruta_csv_local, 'no_processing_data.csv')
+            es_manager.procesar_y_subir_csv(ruta_csv_local, 'no_processing_data.csv')
     except Exception as e:
         print(f"Error subiendo datos sin filtrar: {e}")
     
@@ -663,7 +733,7 @@ def main():
                 archivos = os.listdir(data_folder_path)
                 if archivos:
                     print(f"Encontrados {len(archivos)} archivos procesados")
-                    if subir_datasets_a_elasticsearch(data_folder_path):
+                    if es_manager.subir_datasets_a_elasticsearch(data_folder_path):
                         print("Carga completada exitosamente")
                     break
             
@@ -675,18 +745,17 @@ def main():
         except Exception as e:
             print(f"Error en intento {intento + 1}: {e}")
     
-    # Verificaciones finales de conexión
-    IntentoConexion()
-    
     # Crear Data Views automáticamente en Kibana
     crear_data_views_kibana()
     
-    # Realizar consultas estáticas y enviar resultados a caché
+    # Realizar consultas estáticas
     realizar_consultas_estaticas()
+    
+    # También exportar usando la clase (método adicional)
+    es_manager.exportar_consultas_estaticas_json()
     
     print("Carga de datos completada exitosamente")
     print("El contenedor elastic terminará - Elasticsearch y Kibana siguen disponibles")
-    
 
 
 if __name__ == "__main__":
