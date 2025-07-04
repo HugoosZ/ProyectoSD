@@ -12,7 +12,6 @@ def main():
     if not esperar_flag_datos_listos():
         return
     
-    eliminar_flag_datos_listos()
     print("Iniciando carga de datos en cache")
     
     # Crear instancia de RedisCache
@@ -29,6 +28,7 @@ def main():
         
         if cache.enviar_resultados_a_cache(DATA_DIR):
             print("Datos cargados exitosamente en Redis")
+            eliminar_flag_datos_listos()
         else:
             print("Error al cargar datos en Redis")
             
@@ -37,7 +37,7 @@ def main():
         import traceback
         traceback.print_exc()
 
-def esperar_flag_datos_listos(max_intentos=60, intervalo=10):
+def esperar_flag_datos_listos(max_intentos=600, intervalo=10):
     """
     Esperar a que aparezca el flag que indica que los datos están listos
     """
@@ -54,7 +54,6 @@ def esperar_flag_datos_listos(max_intentos=60, intervalo=10):
                 
                 return True
             
-            print(f"   Intento {intento + 1}/{max_intentos} - Flag no encontrado, esperando {intervalo}s...")
             time.sleep(intervalo)
             
         except Exception as e:

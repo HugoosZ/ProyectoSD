@@ -27,7 +27,7 @@ class RedisCache:
         """Verifica que Redis esté accesible."""
         try:
             self.client.ping()
-            print("✅ Conexión a Redis exitosa")
+            print("Conexión a Redis exitosa")
         except redis.ConnectionError as e:
             raise RuntimeError(f"Error conectando a Redis: {e}")
 

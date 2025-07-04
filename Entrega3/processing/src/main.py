@@ -14,7 +14,7 @@ from mongo_storage import MongoStorage
 # Verifica si Hadoop está listo antes de seguir
 # Intenta varias veces por si tarda en levantar
 
-def verificar_hadoop(max_intentos=5, espera_entre_intentos=10):
+def verificar_hadoop(max_intentos=500, espera_entre_intentos=10):
     print("\nVerificando conexión con Hadoop")
     for intento in range(max_intentos):
         try:

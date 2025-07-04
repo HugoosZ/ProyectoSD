@@ -620,8 +620,6 @@ def realizar_consultas_estaticas():
                 
                 print(f"Guardado en: {consulta['archivo']}")
                 
-                # 3. Leer JSON guardado
-                print("Leyendo JSON guardado...")
                 with open(archivo_destino, 'r', encoding='utf-8') as f:
                     resultado_cargado = json.load(f)
                 
@@ -738,11 +736,25 @@ def main():
     # Crear instancia del gestor de Elasticsearch
     es_manager = ElasticsearchManager()
     
+    print("\n" + "="*50)
+    print("  ESPERANDO FLAG DE DATOS LISTOS")
+    print("="*50)
+    
+    # Esperar a que el flag indique que los datos están listos ANTES de hacer cualquier cosa
+    print("Esperando flag data_ready.flag del contenedor processing...")
+    if not esperar_flag_datos_listos():
+        print("Timeout esperando datos procesados - saliendo")
+        return
+    
+    print("Flag encontrado - iniciando procesamiento completo")
+
     # Verificar si los datos están actualizados comparando filas
     if es_manager.verificar_datos_actualizados():
         print("\nDatos ya están actualizados - no se requiere carga")
         print("Elasticsearch y Kibana están disponibles en sus contenedores")
         
+        eliminar_flag_datos_listos()
+
         # Realizar consultas estáticas incluso cuando los datos están actualizados
         realizar_consultas_estaticas()
         return
