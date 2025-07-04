@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import time
 from conexion import IntentoConexion
 import pandas as pd
 from elasticsearch import Elasticsearch
@@ -602,7 +603,7 @@ def realizar_consultas_estaticas():
                 )
                 
                 total_docs = resultado_original['hits']['total']['value']
-                print(f"📊 Resultado original: {total_docs} documentos")
+                print(f" Resultado original: {total_docs} documentos")
                 
                 # Mostrar agregaciones si existen
                 if 'aggregations' in resultado_original:
@@ -643,10 +644,10 @@ def realizar_consultas_estaticas():
                     print(f"   ✓ Agregaciones coinciden: {'SÍ' if aggs_coinciden else 'NO'}")
                 
                 archivos_generados.append(consulta["archivo"])
-                print(f"   ✅ Consulta completada y verificada")
+                print(f"   Consulta completada y verificada")
                     
             except Exception as e:
-                print(f"❌ Error procesando {consulta['nombre']}: {e}")
+                #print(f"❌ Error procesando {consulta['nombre']}: {e}")
                 continue
         
         # Crear resumen final
@@ -663,16 +664,71 @@ def realizar_consultas_estaticas():
         with open(archivo_resumen, 'w', encoding='utf-8') as f:
             json.dump(resumen, f, indent=2, ensure_ascii=False, default=str)
         
-        print(f"📋 Resumen guardado en: resumen_consultas.json")
-        print(f"📁 Total archivos JSON: {len(archivos_generados) + 1}")
-        print(f"📂 Ubicación: {directorio_resultados}")
-        print(f"\n✅ Proceso completado - {len(archivos_generados)} consultas ejecutadas, guardadas y verificadas")
+        print(f" Resumen guardado en: resumen_consultas.json")
+        print(f" Total archivos JSON: {len(archivos_generados) + 1}")
+        print(f" Ubicación: {directorio_resultados}")
+        print(f"\n Proceso completado - {len(archivos_generados)} consultas ejecutadas, guardadas y verificadas")
         
+        try:
+            flag_path = '/app/shared-data/data_ready_cache.flag'
+            flag_info = {
+                "timestamp": datetime.now().isoformat(),
+                "status": "data_ready",
+                "message": "Datos procesados listos para Cache-Service"
+            }
+            
+            with open(flag_path, 'w', encoding='utf-8') as f:
+                json.dump(flag_info, f, indent=2, ensure_ascii=False)
+        
+        except Exception as e:
+            print(f"Error creando flag: {e}")
+
         return True
+        
         
     except Exception as e:
         print(f"❌ Error en consultas estáticas: {e}")
         return False
+
+
+def esperar_flag_datos_listos(max_intentos=60, intervalo=10):
+    """
+    Esperar a que aparezca el flag que indica que los datos están listos
+    """
+    flag_path = '/app/shared-data/data_ready.flag'
+    
+    for intento in range(max_intentos):
+        try:
+            if os.path.exists(flag_path):
+                # Leer información del flag
+                with open(flag_path, 'r', encoding='utf-8') as f:
+                    flag_info = json.load(f)
+                return True
+            
+            print(f"Intento {intento + 1}/{max_intentos} - Flag no encontrado, esperando {intervalo}s...")
+            time.sleep(intervalo)
+            
+        except Exception as e:
+            print(f"   Error verificando flag (intento {intento + 1}): {e}")
+            time.sleep(intervalo)
+    
+    print(f"Timeout: No se encontró el flag después de {max_intentos * intervalo} segundos")
+    return False
+
+
+def eliminar_flag_datos_listos():
+    """
+    Eliminar el flag una vez que se han procesado los datos
+    """
+    flag_path = '/app/shared-data/data_ready.flag'
+    
+    try:
+        if os.path.exists(flag_path):
+            os.remove(flag_path)
+        else:
+            print(f"Flag no encontrado para eliminar: {flag_path}")
+    except Exception as e:
+        print(f"Error eliminando flag: {e}")
 
 
 def main():
@@ -725,25 +781,8 @@ def main():
     data_folder_path = '/app/shared-data/data'
     print(f"\nEsperando datos procesados en: {data_folder_path}")
     
-    # Sistema de reintentos para esperar que termine el processing
-    max_intentos = 100
-    for intento in range(max_intentos):
-        try:
-            if os.path.exists(data_folder_path):
-                archivos = os.listdir(data_folder_path)
-                if archivos:
-                    print(f"Encontrados {len(archivos)} archivos procesados")
-                    if es_manager.subir_datasets_a_elasticsearch(data_folder_path):
-                        print("Carga completada exitosamente")
-                    break
-            
-            # Continuar esperando si no hay archivos aún
-            if intento < max_intentos - 1:
-                print(f"Esperando... (intento {intento + 1}/{max_intentos})")
-                import time
-                time.sleep(10)
-        except Exception as e:
-            print(f"Error en intento {intento + 1}: {e}")
+    # Eliminar flag después del procesamiento
+    eliminar_flag_datos_listos()
     
     # Crear Data Views automáticamente en Kibana
     crear_data_views_kibana()

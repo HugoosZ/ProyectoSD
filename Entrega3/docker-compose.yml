@@ -40,7 +40,6 @@ services:
 
     restart: no
 
-
     
   waze-processing:
     build: ./processing
@@ -51,7 +50,6 @@ services:
       - ./processing/results:/app/processing/results # processing results se monta en /processing/results (no existe results, entonces acá se gueden los resultados del contenedor)
       - ./storage/src:/app/storage
       - ./shared-data:/app/shared-data  # Directorio local compartido con elastic
-      
     env_file:
       - mongo.env
     depends_on:
@@ -60,6 +58,7 @@ services:
       - hadoop-datanode
     networks:
       - trafico-network
+    restart: unless-stopped
 
       
   hadoop-namenode: # Nodo maestro encargado de almacenar las metadata, de la biblioteca(datanode) es como el catologo que sabe todo lo que hay en la biblioteca

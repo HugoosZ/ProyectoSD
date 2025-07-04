@@ -168,14 +168,7 @@ def guardar_datos_para_elastic():
         
         # Mapeo de resultados a copiar
         archivos_a_copiar = {
-            'data_unique': 'data_unique.csv',
-            'event_counts': 'event_counts.csv',
-            'incidentes_por_comuna': 'incidentes_por_comuna.csv',
-            'incidentes_ciudad_tipo': 'incidentes_ciudad_tipo.csv',
-            'evolucion_temporal_diaria': 'evolucion_temporal_diaria.csv',
-            'evolucion_por_tipo': 'evolucion_por_tipo.csv',
-            'distribucion_horaria': 'distribucion_horaria.csv',
-            'picos_por_hora_tipo': 'picos_por_hora_tipo.csv'
+            'data_unique': 'data_unique.csv'
         }
         
         archivos_copiados = 0
@@ -202,6 +195,11 @@ def guardar_datos_para_elastic():
         
         if archivos_copiados > 0:
             print(f"Todos los datos procesados disponibles en: {directorio_destino}")
+
+            data_unique = '/app/shared-data/data/data_unique.csv'
+            if os.path.exists(data_unique):
+            # Crear flag para indicar que los datos están listos
+                crear_flag_datos_listos()
             return True
         else:
             print("No se pudo copiar ningún archivo de resultados")
@@ -210,6 +208,23 @@ def guardar_datos_para_elastic():
     except Exception as e:
         print(f"Error copiando datos para elastic: {str(e)}")
         return False
+
+
+def crear_flag_datos_listos():
+    """Crear archivo flag para indicar que los datos están listos para elastic"""
+    try:
+        flag_path = '/app/shared-data/data_ready.flag'
+        flag_info = {
+            "timestamp": datetime.now().isoformat(),
+            "status": "data_ready",
+            "message": "Datos procesados listos para Elasticsearch"
+        }
+        
+        with open(flag_path, 'w', encoding='utf-8') as f:
+            json.dump(flag_info, f, indent=2, ensure_ascii=False)
+        
+    except Exception as e:
+        print(f"Error creando flag: {e}")
 
 # Orquesta todo el procesamiento
 
